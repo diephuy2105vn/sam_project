@@ -141,6 +141,7 @@ const ProjectOnly = () => {
           {selectedImage ? (
             <ImageAnnotationTool
               imageUrl={selectedImage.url}
+              selectedTool={selectedTool}
               onSave={() => {}}
             />
           ) : (
