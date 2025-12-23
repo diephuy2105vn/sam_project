@@ -8,8 +8,8 @@ import {
   Text,
 } from "@mantine/core";
 import { Image, Sparkles, Tag, Upload } from "lucide-react";
-import { useRef, useState, type Dispatch, type SetStateAction } from "react";
-import type { ImageType } from "../pages/MainPage";
+import { useState, type Dispatch, type SetStateAction } from "react";
+import type { ImageType } from "../pages/ProjectOnly";
 import ImageThumbnail from "./ImageThumbnail";
 
 const Slidebar = ({
@@ -39,7 +39,6 @@ const Slidebar = ({
       style={{
         display: "flex",
         height: "100vh",
-        background: "#1a1b1e",
         color: "white",
       }}
     >

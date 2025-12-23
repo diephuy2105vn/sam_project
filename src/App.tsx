@@ -1,8 +1,9 @@
 import "./App.css";
 import "@mantine/core/styles.css";
 
-import MainPage from "./pages/MainPage";
 import { createTheme, MantineProvider } from "@mantine/core";
+import { Route, Routes } from "react-router-dom";
+import publicRouters from "./routes/publicRouters";
 
 const theme = createTheme({
   colors: {
@@ -39,7 +40,14 @@ const theme = createTheme({
 function App() {
   return (
     <MantineProvider theme={theme} forceColorScheme="dark">
-      <MainPage />
+      <Routes>
+        {
+          /* Add your route components here */
+          publicRouters.map((route, index) => (
+            <Route key={index} path={route.path} element={route.element} />
+          ))
+        }
+      </Routes>
     </MantineProvider>
   );
 }

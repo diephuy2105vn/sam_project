@@ -9,6 +9,8 @@ export type ImageType = {
   id: number;
   name: string;
   url: string;
+  file: File;
+  uploading?: boolean;
 };
 
 export type AnnotationType = {
@@ -20,7 +22,7 @@ export type AnnotationType = {
   height: number;
 };
 
-export default function MainPage() {
+const ProjectOnly = () => {
   const [images, setImages] = useState<ImageType[]>([]);
   const [selectedTool, setSelectedTool] = useState("");
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
@@ -28,7 +30,12 @@ export default function MainPage() {
   const [history, setHistory] = useState<AnnotationType[][]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadSingleImage = async (image: ImageType) => {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    console.log("Uploaded image:", image.name);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
     const files = Array.from(e.target.files);
@@ -36,6 +43,7 @@ export default function MainPage() {
     const newImages = files.map((file, index) => ({
       id: Date.now() + index,
       url: URL.createObjectURL(file as Blob),
+      uploading: true,
       file: file,
       name: file?.name,
     }));
@@ -43,6 +51,33 @@ export default function MainPage() {
     setImages((prev: ImageType[]) => [...prev, ...newImages]);
     if (!selectedImage && newImages.length > 0) {
       setSelectedImage(newImages[0]);
+    }
+
+    if (!selectedImage && newImages.length > 0) {
+      setSelectedImage(newImages[0]);
+    }
+
+    for (const img of newImages) {
+      try {
+        await uploadSingleImage(img);
+
+        setImages((prev) =>
+          prev.map((i) =>
+            i.id === img.id
+              ? {
+                  ...i,
+                  uploading: false,
+                }
+              : i
+          )
+        );
+      } catch {
+        setImages((prev) =>
+          prev.map((i) =>
+            i.id === img.id ? { ...i, uploading: false, error: true } : i
+          )
+        );
+      }
     }
   };
 
@@ -67,14 +102,11 @@ export default function MainPage() {
       padding="md"
       styles={{
         main: {
-          backgroundColor: "#1A1B1E",
           minHeight: "100vh",
         },
       }}
     >
-      <AppShell.Navbar
-        style={{ backgroundColor: "#25262B", borderRight: "1px solid #373A40" }}
-      >
+      <AppShell.Navbar>
         <input
           ref={fileInputRef}
           type="file"
@@ -101,8 +133,8 @@ export default function MainPage() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            minHeight: "calc(100vh - 32px)",
-            padding: "20px",
+            minHeight: "calc(100vh - 20px)",
+            padding: "10px",
             position: "relative",
           }}
         >
@@ -149,4 +181,6 @@ export default function MainPage() {
       </AppShell.Main>
     </AppShell>
   );
-}
+};
+
+export default ProjectOnly;

@@ -1,6 +1,6 @@
 import { ActionIcon, Card } from "@mantine/core";
 import { MousePointer2, Save, Trash2, Undo, WandSparkles } from "lucide-react";
-import type { AnnotationType, ImageType } from "../pages/MainPage";
+import type { AnnotationType, ImageType } from "../pages/ProjectOnly";
 
 const ListTool = ({
   selectedTool,
