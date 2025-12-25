@@ -1,73 +1,118 @@
 import {
+  ActionIcon,
   AppShell,
+  Badge,
   Button,
   Card,
   Container,
+  Flex,
   Grid,
   Group,
-  Stack,
-  Text,
-  TextInput,
-  ActionIcon,
-  Badge,
   Menu,
-  Table,
-  Flex,
+  Modal,
+  MultiSelect,
   SegmentedControl,
+  Stack,
+  Table,
+  Text,
+  Textarea,
+  TextInput,
 } from "@mantine/core";
 import {
-  IconPlus,
-  IconSearch,
-  IconPhoto,
   IconDots,
   IconEdit,
-  IconTrash,
   IconFolder,
-  IconLayoutList,
   IconLayoutGrid,
+  IconLayoutList,
+  IconPlus,
+  IconSearch,
+  IconTrash,
 } from "@tabler/icons-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import projectApi from "../services/projectApi";
 import { Link } from "react-router-dom";
 
 type ProjectType = {
-  id: number;
+  id?: string;
   name: string;
-  imageCount: number;
-  createdAt: string;
-  thumbnail?: string;
+  description: string;
+  labels: string[];
+  createdAt?: string;
 };
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const [projects, setProjects] = useState<ProjectType[]>([
-    {
-      id: 1,
-      name: "Dự án nhận diện sản phẩm",
-      imageCount: 24,
-      createdAt: "2024-12-20",
-      thumbnail:
-        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop",
-    },
-    {
-      id: 2,
-      name: "Phát hiện khuyết tật",
-      imageCount: 156,
-      createdAt: "2024-12-18",
-      thumbnail:
-        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=300&h=200&fit=crop",
-    },
-    {
-      id: 3,
-      name: "Kiểm tra chất lượng",
-      imageCount: 89,
-      createdAt: "2024-12-15",
-    },
-  ]);
+  const [isOpenModal, setIsOpen] = useState(false);
 
-  const handleDeleteProject = (id: number) => {
-    setProjects(projects.filter((p) => p.id !== id));
+  // Form state
+  const [creatingProject, setCreatingProject] = useState<ProjectType>({
+    name: "",
+    description: "",
+    labels: [],
+  });
+
+  const [updatingProject, setUpdatingProject] = useState<ProjectType | null>(
+    null
+  );
+
+  const [modalMode, setModalMode] = useState<"create" | "update">("create");
+
+  const [projects, setProjects] = useState<ProjectType[]>([]);
+
+  const fetchProject = async () => {
+    try {
+      const res = await projectApi.getProject();
+      setProjects(res.data as ProjectType[]);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProject();
+  }, []);
+
+  const toggleModal = (mode?: "update" | "create") => {
+    setIsOpen(!isOpenModal);
+    if (mode) setModalMode(mode);
+  };
+
+  const handleCreateProject = async () => {
+    if (!creatingProject.name.trim()) {
+      alert("Vui lòng nhập tên dự án");
+      return;
+    }
+    const res = await projectApi.createProject(creatingProject);
+
+    const createdProject = res.data as ProjectType;
+
+    setProjects([createdProject, ...projects]);
+    setCreatingProject({ name: "", description: "", labels: [] });
+    toggleModal();
+  };
+
+  const handleUpdateProject = async () => {
+    if (!updatingProject?.id) return;
+
+    const res = await projectApi.updateProject(
+      updatingProject?.id,
+      updatingProject
+    );
+
+    const updatedProject = res.data as ProjectType;
+
+    setProjects((pre) =>
+      pre.map((proj) => (proj.id === updatedProject.id ? updatedProject : proj))
+    );
+
+    setUpdatingProject(null);
+    toggleModal();
+  };
+
+  const handleDeleteProject = (id: string | undefined) => {
+    setProjects(projects.filter((p) => p?.id !== id));
   };
 
   const filteredProjects = projects.filter((project) =>
@@ -89,22 +134,21 @@ const HomePage = () => {
             {/* Header */}
             <Group justify="space-between" align="center">
               <div>
-                <Text size="32px" fw={700} c="white">
+                <Text size="32px" fw={700}>
                   Dự Án Của Tôi
                 </Text>
                 <Text size="sm" c="dimmed" mt={4}>
                   Quản lý và tổ chức các dự án annotation của bạn
                 </Text>
               </div>
-              <Link to="/project/create">
-                <Button
-                  leftSection={<IconPlus size={20} />}
-                  variant="gradient"
-                  gradient={{ from: "blue", to: "cyan", deg: 90 }}
-                >
-                  Tạo Dự Án Mới
-                </Button>
-              </Link>
+              <Button
+                leftSection={<IconPlus size={20} />}
+                variant="gradient"
+                gradient={{ from: "brand", to: "blue", deg: 90 }}
+                onClick={() => toggleModal("create")}
+              >
+                Tạo Dự Án Mới
+              </Button>
             </Group>
 
             {/* Search Bar */}
@@ -154,51 +198,11 @@ const HomePage = () => {
                       key={project.id}
                       span={{ base: 12, sm: 6, md: 4 }}
                     >
-                      <Card
-                        shadow="md"
-                        padding="lg"
-                        radius="md"
-                        style={{
-                          backgroundColor: "#25262B",
-                          borderColor: "#373A40",
-                          border: "1px solid #373A40",
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "#4C6EF5";
-                          e.currentTarget.style.transform = "translateY(-4px)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = "#373A40";
-                          e.currentTarget.style.transform = "translateY(0)";
-                        }}
-                      >
-                        {/* Thumbnail */}
-                        <Card.Section>
-                          <Flex
-                            justify="center"
-                            align="center"
-                            style={{
-                              height: 180,
-                              backgroundColor: "#1A1B1E",
-                              backgroundImage: project.thumbnail
-                                ? `url(${project.thumbnail})`
-                                : "none",
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                            }}
-                          >
-                            {!project.thumbnail && (
-                              <IconFolder size={60} color="#5C5F66" />
-                            )}
-                          </Flex>
-                        </Card.Section>
-
+                      <Card shadow="md" padding="lg" radius="md">
                         {/* Content */}
-                        <Stack gap="xs" mt="md">
+                        <Stack gap="xs">
                           <Group justify="space-between" align="flex-start">
-                            <Text fw={600} size="lg" c="white" lineClamp={1}>
+                            <Text fw={600} size="lg" lineClamp={1}>
                               {project.name}
                             </Text>
                             <Menu shadow="md" width={200}>
@@ -211,15 +215,14 @@ const HomePage = () => {
                                   <IconDots size={20} />
                                 </ActionIcon>
                               </Menu.Target>
-                              <Menu.Dropdown
-                                style={{
-                                  backgroundColor: "#25262B",
-                                  borderColor: "#373A40",
-                                }}
-                              >
+                              <Menu.Dropdown>
                                 <Menu.Item
                                   leftSection={<IconEdit size={16} />}
-                                  style={{ color: "white" }}
+                                  style={{}}
+                                  onClick={() => {
+                                    toggleModal("update");
+                                    setUpdatingProject(project);
+                                  }}
                                 >
                                   Chỉnh sửa
                                 </Menu.Item>
@@ -237,22 +240,35 @@ const HomePage = () => {
                             </Menu>
                           </Group>
 
-                          <Group gap="xs">
-                            <Badge
-                              variant="light"
-                              color="blue"
-                              leftSection={<IconPhoto size={14} />}
-                            >
-                              {project.imageCount} ảnh
-                            </Badge>
-                          </Group>
+                          {project.description && (
+                            <Text size="sm" c="dimmed" lineClamp={3}>
+                              {project.description}
+                            </Text>
+                          )}
 
-                          <Text size="xs" c="dimmed">
-                            Tạo ngày:{" "}
-                            {new Date(project.createdAt).toLocaleDateString(
-                              "vi-VN"
-                            )}
-                          </Text>
+                          {project.labels.length > 0 && (
+                            <Flex gap={4} wrap="wrap" mt="xs">
+                              {project.labels.map((label, idx) => (
+                                <Badge
+                                  key={idx}
+                                  size="sm"
+                                  variant="dot"
+                                  color="blue"
+                                >
+                                  {label}
+                                </Badge>
+                              ))}
+                            </Flex>
+                          )}
+
+                          {project?.createdAt && (
+                            <Text size="xs" c="dimmed" mt="xs">
+                              Tạo ngày:{" "}
+                              {new Date(project?.createdAt).toLocaleDateString(
+                                "vi-VN"
+                              )}
+                            </Text>
+                          )}
                         </Stack>
                       </Card>
                     </Grid.Col>
@@ -263,16 +279,14 @@ const HomePage = () => {
                   highlightOnHover
                   verticalSpacing="md"
                   style={{
-                    backgroundColor: "#25262B",
                     borderRadius: 8,
                     overflow: "hidden",
                   }}
                 >
-                  <Table.Thead style={{ backgroundColor: "#1A1B1E" }}>
+                  <Table.Thead>
                     <Table.Tr>
                       <Table.Th
                         style={{
-                          color: "white",
                           fontWeight: 600,
                           padding: "16px",
                         }}
@@ -281,16 +295,22 @@ const HomePage = () => {
                       </Table.Th>
                       <Table.Th
                         style={{
-                          color: "white",
                           fontWeight: 600,
                           padding: "16px",
                         }}
                       >
-                        Số lượng ảnh
+                        Mô tả
                       </Table.Th>
                       <Table.Th
                         style={{
-                          color: "white",
+                          fontWeight: 600,
+                          padding: "16px",
+                        }}
+                      >
+                        Nhãn
+                      </Table.Th>
+                      <Table.Th
+                        style={{
                           fontWeight: 600,
                           padding: "16px",
                         }}
@@ -299,7 +319,6 @@ const HomePage = () => {
                       </Table.Th>
                       <Table.Th
                         style={{
-                          color: "white",
                           fontWeight: 600,
                           padding: "16px",
                           width: 100,
@@ -316,77 +335,71 @@ const HomePage = () => {
                         key={project.id}
                         style={{
                           cursor: "pointer",
-                          transition: "background-color 0.2s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "#2C2E33";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "transparent";
                         }}
                       >
                         <Table.Td
                           style={{
-                            color: "white",
-                            borderColor: "#373A40",
                             padding: "16px",
                           }}
                         >
-                          <Flex align="center" gap="md">
-                            <div
-                              style={{
-                                width: 50,
-                                height: 50,
-                                borderRadius: 8,
-                                backgroundColor: "#1A1B1E",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                backgroundImage: project.thumbnail
-                                  ? `url(${project.thumbnail})`
-                                  : "none",
-                                backgroundSize: "cover",
-                                backgroundPosition: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              {!project.thumbnail && (
-                                <IconFolder size={24} color="#5C5F66" />
-                              )}
-                            </div>
-                            <Text fw={500}>{project.name}</Text>
-                          </Flex>
-                        </Table.Td>
-                        <Table.Td
-                          style={{
-                            color: "white",
-                            borderColor: "#373A40",
-                            padding: "16px",
-                          }}
-                        >
-                          <Badge
-                            variant="light"
-                            color="blue"
-                            leftSection={<IconPhoto size={14} />}
+                          <Link
+                            to={`/project/${project.id}`}
+                            style={{ textDecoration: "none" }}
                           >
-                            {project.imageCount} ảnh
-                          </Badge>
+                            <Text size="sm" c="brand" fw="500">
+                              {project.name}
+                            </Text>
+                          </Link>
                         </Table.Td>
                         <Table.Td
                           style={{
-                            borderColor: "#373A40",
                             padding: "16px",
+                            maxWidth: 300,
                           }}
                         >
-                          <Text size="sm" c="dimmed">
-                            {new Date(project.createdAt).toLocaleDateString(
-                              "vi-VN"
-                            )}
+                          <Text size="sm" c="dimmed" lineClamp={2}>
+                            {project.description || "—"}
                           </Text>
                         </Table.Td>
                         <Table.Td
                           style={{
-                            borderColor: "#373A40",
+                            padding: "16px",
+                          }}
+                        >
+                          <Flex gap={4} wrap="wrap">
+                            {project.labels.length > 0 ? (
+                              project.labels.map((label, idx) => (
+                                <Badge
+                                  key={idx}
+                                  size="sm"
+                                  variant="dot"
+                                  color="gray"
+                                >
+                                  {label}
+                                </Badge>
+                              ))
+                            ) : (
+                              <Text size="sm" c="dimmed">
+                                —
+                              </Text>
+                            )}
+                          </Flex>
+                        </Table.Td>
+                        <Table.Td
+                          style={{
+                            padding: "16px",
+                          }}
+                        >
+                          {project.createdAt && (
+                            <Text size="sm" c="dimmed">
+                              {new Date(project.createdAt).toLocaleDateString(
+                                "vi-VN"
+                              )}
+                            </Text>
+                          )}
+                        </Table.Td>
+                        <Table.Td
+                          style={{
                             padding: "16px",
                           }}
                         >
@@ -401,15 +414,10 @@ const HomePage = () => {
                                   <IconDots size={20} />
                                 </ActionIcon>
                               </Menu.Target>
-                              <Menu.Dropdown
-                                style={{
-                                  backgroundColor: "#25262B",
-                                  borderColor: "#373A40",
-                                }}
-                              >
+                              <Menu.Dropdown>
                                 <Menu.Item
                                   leftSection={<IconEdit size={16} />}
-                                  style={{ color: "white" }}
+                                  style={{}}
                                 >
                                   Chỉnh sửa
                                 </Menu.Item>
@@ -441,21 +449,151 @@ const HomePage = () => {
                     : "Chưa có dự án nào"}
                 </Text>
                 {!searchQuery && (
-                  <Link to="/project/create">
-                    <Button
-                      leftSection={<IconPlus size={20} />}
-                      variant="light"
-                      size="lg"
-                    >
-                      Tạo Dự Án Đầu Tiên
-                    </Button>
-                  </Link>
+                  <Button
+                    leftSection={<IconPlus size={20} />}
+                    variant="light"
+                    size="lg"
+                    onClick={() => toggleModal("create")}
+                  >
+                    Tạo Dự Án Đầu Tiên
+                  </Button>
                 )}
               </Stack>
             )}
           </Stack>
         </Container>
       </AppShell.Main>
+
+      {/* Create Project Modal */}
+      <Modal
+        opened={isOpenModal}
+        onClose={() => toggleModal()}
+        title={
+          <Text size="xl" fw={700}>
+            {modalMode == "create" ? "Tạo Dự Án Mới" : "Cập Nhật Dự Án"}
+          </Text>
+        }
+        size="lg"
+      >
+        <Stack gap="sm">
+          <TextInput
+            label="Tên dự án"
+            placeholder="Nhập tên dự án..."
+            size="sm"
+            styles={{
+              label: {
+                marginBottom: "8px",
+              },
+            }}
+            required
+            value={
+              modalMode === "update"
+                ? updatingProject?.name
+                : creatingProject.name
+            }
+            onChange={(e) =>
+              modalMode === "update"
+                ? setUpdatingProject((pre) =>
+                    pre
+                      ? {
+                          ...pre,
+                          name: e.target.value,
+                        }
+                      : null
+                  )
+                : setCreatingProject((pre) => ({
+                    ...pre,
+                    name: e.target.value,
+                  }))
+            }
+          />
+
+          <Textarea
+            label="Mô tả"
+            size="sm"
+            styles={{
+              label: {
+                marginBottom: "8px",
+              },
+            }}
+            placeholder="Nhập mô tả dự án..."
+            minRows={3}
+            value={
+              modalMode === "update"
+                ? updatingProject?.description
+                : creatingProject.description
+            }
+            onChange={(e) =>
+              modalMode === "update"
+                ? setUpdatingProject((pre) =>
+                    pre
+                      ? {
+                          ...pre,
+                          description: e.target.value,
+                        }
+                      : null
+                  )
+                : setCreatingProject((pre) => ({
+                    ...pre,
+                    description: e.target.value,
+                  }))
+            }
+          />
+
+          <MultiSelect
+            label="Nhãn"
+            size="sm"
+            styles={{
+              label: {
+                marginBottom: "8px",
+              },
+            }}
+            placeholder="Chọn hoặc thêm nhãn..."
+            value={
+              modalMode === "update"
+                ? updatingProject?.labels
+                : creatingProject.labels
+            }
+            onChange={(value) =>
+              modalMode === "update"
+                ? setUpdatingProject((pre) =>
+                    pre
+                      ? {
+                          ...pre,
+                          labels: value,
+                        }
+                      : null
+                  )
+                : setCreatingProject((pre) => ({
+                    ...pre,
+                    labels: value,
+                  }))
+            }
+            searchable
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={() => setIsOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="gradient"
+              gradient={{ from: "brand", to: "blue", deg: 90 }}
+              onClick={
+                modalMode === "update"
+                  ? handleUpdateProject
+                  : handleCreateProject
+              }
+            >
+              {modalMode === "update" ? "Cập nhật" : "Tạo dự án"}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </AppShell>
   );
 };

@@ -1,17 +1,25 @@
 import { Button, Card, Flex, MultiSelect } from "@mantine/core";
 import { useEffect, useRef, useState } from "react";
 
-const ImageAnnotationTool = ({ imageUrl, selectedTool, onSave }) => {
-  const canvasRef = useRef(null);
+const ImageAnnotationTool = ({
+  imageUrl,
+  selectedTool,
+  onSave,
+}: {
+  imageUrl: string;
+  selectedTool: string;
+  onSave: () => void;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef(null);
 
-  const [allLabels, setAllLabels] = useState([]);
+  const [allLabels, setAllLabels] = useState<string[]>([]);
   const [scale, setScale] = useState(1);
   const [editingLabel, setEditingLabel] = useState(null);
-  const [labelInput, setLabelInput] = useState([]);
+  const [labelInput, setLabelInput] = useState<string[]>([]);
   const [labelSerachInput, setLabelSearchInput] = useState("");
   const [labelPosition, setLabelPosition] = useState({ x: 0, y: 0 });
-  const [image, setImage] = useState(null);
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -119,16 +127,13 @@ const ImageAnnotationTool = ({ imageUrl, selectedTool, onSave }) => {
       </Card>
 
       {/* Canvas Container */}
-      <div
+      <Card
         ref={containerRef}
         style={{
           position: "relative",
           width: "100%",
           height: "calc(100vh - 160px)",
           overflow: "auto",
-          backgroundColor: "#25262B",
-          borderRadius: "8px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -136,7 +141,6 @@ const ImageAnnotationTool = ({ imageUrl, selectedTool, onSave }) => {
       >
         <div
           style={{
-            display: "inline-block",
             minWidth: "100%",
             minHeight: "100%",
             display: "flex",
@@ -159,15 +163,12 @@ const ImageAnnotationTool = ({ imageUrl, selectedTool, onSave }) => {
         </div>
 
         {editingLabel && (
-          <div
+          <Card
             style={{
               position: "absolute",
               top: `${labelPosition.y}px`,
               left: `${labelPosition.x}px`,
-              backgroundColor: "#1a1b1e",
               padding: "8px",
-              borderRadius: "6px",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
               zIndex: 1000,
               border: "2px solid #3b82f6",
               minWidth: "250px",
@@ -209,9 +210,9 @@ const ImageAnnotationTool = ({ imageUrl, selectedTool, onSave }) => {
                 Bỏ qua
               </Button>
             </div>
-          </div>
+          </Card>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

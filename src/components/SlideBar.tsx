@@ -1,5 +1,6 @@
 import {
   Button,
+  Card,
   Flex,
   Group,
   ScrollArea,
@@ -93,8 +94,6 @@ const Slidebar = ({
           direction="column"
           style={{
             width: "100%",
-            background: "#25262b",
-            borderRight: "1px solid #2c2e33",
           }}
         >
           <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
@@ -140,11 +139,9 @@ const Slidebar = ({
           </ScrollArea>
         </Flex>
       ) : (
-        <div
+        <Card
           style={{
             width: "100%",
-            background: "#25262b",
-            borderRight: "1px solid #2c2e33",
             display: "flex",
             flexDirection: "column",
           }}
@@ -182,7 +179,7 @@ const Slidebar = ({
               </Tabs.Panel>
             </Tabs>
           </ScrollArea>
-        </div>
+        </Card>
       )}
     </div>
   );
