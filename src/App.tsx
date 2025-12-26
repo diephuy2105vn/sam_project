@@ -1,10 +1,11 @@
 import "./App.css";
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 
 import { createTheme, MantineProvider } from "@mantine/core";
 import { Route, Routes } from "react-router-dom";
 import publicRouters from "./routes/publicRouters";
-
+import { Notifications } from "@mantine/notifications";
 const theme = createTheme({
   colors: {
     dark: [
@@ -40,6 +41,7 @@ const theme = createTheme({
 function App() {
   return (
     <MantineProvider theme={theme} forceColorScheme="dark">
+      <Notifications />
       <Routes>
         {
           /* Add your route components here */

@@ -25,7 +25,7 @@ const ListTool = ({
       padding="xs"
       radius="xl"
       withBorder
-      style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+      style={{ display: "flex", flexDirection: "row", gap: "4px" }}
     >
       <ActionIcon
         variant={selectedTool === "mouse" ? "filled" : "subtle"}

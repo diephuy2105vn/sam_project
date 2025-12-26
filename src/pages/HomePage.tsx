@@ -32,8 +32,10 @@ import {
 import { useEffect, useState } from "react";
 import projectApi from "../services/projectApi";
 import { Link } from "react-router-dom";
+import { notifications } from "@mantine/notifications";
+import axios from "axios";
 
-type ProjectType = {
+export type ProjectType = {
   id?: string;
   name: string;
   description: string;
@@ -56,9 +58,11 @@ const HomePage = () => {
   const [updatingProject, setUpdatingProject] = useState<ProjectType | null>(
     null
   );
+  const [deletingProject, setDeletingProject] = useState<ProjectType | null>(
+    null
+  );
 
   const [modalMode, setModalMode] = useState<"create" | "update">("create");
-
   const [projects, setProjects] = useState<ProjectType[]>([]);
 
   const fetchProject = async () => {
@@ -66,7 +70,21 @@ const HomePage = () => {
       const res = await projectApi.getProject();
       setProjects(res.data as ProjectType[]);
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: err.response?.data?.message || err.message,
+          position: "top-right",
+        });
+      } else {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: "Lỗi không xác định",
+          position: "top-right",
+        });
+      }
     }
   };
 
@@ -81,7 +99,12 @@ const HomePage = () => {
 
   const handleCreateProject = async () => {
     if (!creatingProject.name.trim()) {
-      alert("Vui lòng nhập tên dự án");
+      notifications.show({
+        color: "red",
+        title: "Tạo dự án thất bạn",
+        message: "Vui lòng nhập đầy đủ thông tin",
+        position: "top-right",
+      });
       return;
     }
     const res = await projectApi.createProject(creatingProject);
@@ -91,6 +114,11 @@ const HomePage = () => {
     setProjects([createdProject, ...projects]);
     setCreatingProject({ name: "", description: "", labels: [] });
     toggleModal();
+    notifications.show({
+      title: "Tạo dự án thành công",
+      message: "",
+      position: "top-right",
+    });
   };
 
   const handleUpdateProject = async () => {
@@ -111,8 +139,12 @@ const HomePage = () => {
     toggleModal();
   };
 
-  const handleDeleteProject = (id: string | undefined) => {
-    setProjects(projects.filter((p) => p?.id !== id));
+  const handleDeleteProject = async () => {
+    if (!deletingProject || !deletingProject.id) return;
+
+    await projectApi.deleteProject(deletingProject.id);
+    setProjects(projects.filter((p) => p?.id !== deletingProject.id));
+    setDeletingProject(null);
   };
 
   const filteredProjects = projects.filter((project) =>
@@ -231,7 +263,7 @@ const HomePage = () => {
                                   color="red"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeleteProject(project.id);
+                                    setDeletingProject(project);
                                   }}
                                 >
                                   Xóa
@@ -426,7 +458,7 @@ const HomePage = () => {
                                   color="red"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeleteProject(project.id);
+                                    setDeletingProject(project);
                                   }}
                                 >
                                   Xóa
@@ -590,6 +622,42 @@ const HomePage = () => {
               }
             >
               {modalMode === "update" ? "Cập nhật" : "Tạo dự án"}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={!!deletingProject}
+        onClose={() => setDeletingProject(null)}
+        title={
+          <Text fw={700} size="lg" c="red">
+            Xác nhận xóa
+          </Text>
+        }
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Bạn có chắc chắn muốn xóa dự án{" "}
+            <Text span fw={600}>
+              {deletingProject?.name}
+            </Text>
+            ?
+            <br />
+            Hành động này <b>không thể hoàn tác</b>.
+          </Text>
+
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setDeletingProject(null)}>
+              Hủy
+            </Button>
+            <Button
+              color="red"
+              leftSection={<IconTrash size={16} />}
+              onClick={() => handleDeleteProject()}
+            >
+              Xóa
             </Button>
           </Group>
         </Stack>

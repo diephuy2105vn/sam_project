@@ -1,167 +1,86 @@
 import { Button, Card, Flex, MultiSelect } from "@mantine/core";
 import { useEffect, useRef, useState } from "react";
 
-const ImageAnnotationTool = ({
-  imageUrl,
-  selectedTool,
-  onSave,
-}: {
-  imageUrl: string;
-  selectedTool: string;
-  onSave: () => void;
-}) => {
+const ImageAnnotationTool = ({ image, selectedTool, onSave }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [allLabels, setAllLabels] = useState<string[]>([]);
-  const [scale, setScale] = useState(1);
-  const [editingLabel, setEditingLabel] = useState(null);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelInput, setLabelInput] = useState<string[]>([]);
   const [labelSerachInput, setLabelSearchInput] = useState("");
   const [labelPosition, setLabelPosition] = useState({ x: 0, y: 0 });
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (imageUrl) {
+    if (image && image?.id) {
       const img = new Image();
       img.onload = () => {
-        setImage(img);
-
-        // Tính toán kích thước để hiển thị toàn bộ ảnh
-        const containerWidth = window.innerWidth * 0.8;
-        const containerHeight = window.innerHeight * 0.8;
-
-        let width = img.width;
-        let height = img.height;
-
-        // Tính tỷ lệ để fit toàn bộ ảnh vào container
-        const widthRatio = containerWidth / width;
-        const heightRatio = containerHeight / height;
-        const ratio = Math.min(widthRatio, heightRatio);
-
-        // Áp dụng tỷ lệ để ảnh vừa vặn
-        width = width * ratio;
-        height = height * ratio;
-
-        setCanvasSize({ width, height });
-
         const canvas = canvasRef.current;
         if (canvas) {
-          canvas.width = width;
-          canvas.height = height;
+          // Canvas luôn là 800x600
+          canvas.width = 1200;
+          canvas.height = 720;
 
-          // Vẽ ảnh ngay lập tức
           const ctx = canvas.getContext("2d");
           if (ctx) {
-            ctx.clearRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
+            // Xóa canvas
+            ctx.clearRect(0, 0, 1200, 720);
+
+            // Tính tỷ lệ để fit ảnh vào 800x600
+            const widthRatio = 1200 / img.width;
+            const heightRatio = 720 / img.height;
+            const ratio = Math.min(widthRatio, heightRatio);
+
+            // Kích thước ảnh sau khi scale
+            const scaledWidth = img.width * ratio;
+            const scaledHeight = img.height * ratio;
+
+            // Vị trí căn giữa
+            const x = (1200 - scaledWidth) / 2;
+            const y = (720 - scaledHeight) / 2;
+
+            // Vẽ ảnh
+            ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
           }
         }
       };
-      img.src = imageUrl;
+      img.src = `https://api-label.tado.vn/api/images/${image?.id}`;
     }
-  }, [imageUrl]);
-
-  useEffect(() => {
-    if (image && canvasRef.current && canvasSize.width > 0) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(image, 0, 0, canvasSize.width, canvasSize.height);
-      }
-    }
-  }, [image, canvasSize, scale]);
-
-  const handleZoomIn = () => {
-    setScale((prev) => Math.min(prev + 0.1, 3));
-  };
-
-  const handleZoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.1, 0.3));
-  };
-
-  const handleResetZoom = () => {
-    setScale(1);
-  };
+  }, [image]);
 
   return (
-    <div
+    <Flex
+      direction={"column"}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        width: "100%",
-        height: "100%",
         position: "relative",
       }}
     >
-      {/* Zoom Controls */}
-      <Card
-        p="xs"
-        shadow="sm"
-        style={{
-          position: "absolute",
-          top: "16px",
-          right: "16px",
-          zIndex: 1000,
-        }}
-      >
-        <Flex>
-          <Button onClick={handleZoomOut} size="sm" variant="light">
-            -
-          </Button>
-          <span
-            style={{ minWidth: "80px", textAlign: "center", color: "#fff" }}
-          >
-            {Math.round(scale * 100)}%
-          </span>
-          <Button onClick={handleZoomIn} size="sm" variant="light">
-            +
-          </Button>
-          <Button onClick={handleResetZoom} size="sm" variant="outline">
-            Reset
-          </Button>
-        </Flex>
-      </Card>
-
-      {/* Canvas Container */}
+      {/* Div cố định 800x600 */}
       <Card
         ref={containerRef}
         style={{
           position: "relative",
-          width: "100%",
-          height: "calc(100vh - 160px)",
-          overflow: "auto",
+          width: "1200px",
+          height: "720px",
+          overflow: "hidden",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <div
-          style={{
-            minWidth: "100%",
-            minHeight: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        {/* Canvas đè lên trên */}
+        {image && (
           <canvas
             ref={canvasRef}
             style={{
-              display: "block",
-              transform: `scale(${scale})`,
-              transformOrigin: "center center",
-              transition: "transform 0.2s ease",
-              margin: `${(canvasSize.height * (scale - 1)) / 2}px ${
-                (canvasSize.width * (scale - 1)) / 2
-              }px`,
+              position: "absolute",
+              top: 0,
+              left: 0,
             }}
           />
-        </div>
+        )}
 
+        {/* Label input */}
         {editingLabel && (
           <Card
             style={{
@@ -213,7 +132,7 @@ const ImageAnnotationTool = ({
           </Card>
         )}
       </Card>
-    </div>
+    </Flex>
   );
 };
 

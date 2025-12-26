@@ -14,6 +14,19 @@ const projectApi = {
     });
   },
 
+  getProjectById: (id: string, params = {}, config = {}) => {
+    const filteredParams = Object.fromEntries(
+      Object.entries(params).filter(
+        ([, v]) => v !== null && v !== undefined && v !== ""
+      )
+    );
+
+    return axiosInstance.get(`/api/projects/${id}`, {
+      ...config,
+      params: filteredParams,
+    });
+  },
+
   createProject: (data = {}, config = {}) => {
     return axiosInstance.post("/api/projects/", data, {
       ...config,

@@ -1,6 +1,17 @@
-import { ActionIcon, Image, Progress, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  Card,
+  Flex,
+  Image,
+  Popover,
+  Progress,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import type { ImageType } from "../pages/ProjectOnly";
+import { useState } from "react";
 const ImageThumbnail = ({
   image,
   isSelected,
@@ -10,19 +21,25 @@ const ImageThumbnail = ({
   image: ImageType;
   isSelected: boolean;
   onSelect: () => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div
+    <Card
+      withBorder
       onClick={onSelect}
-      style={{
-        position: "relative",
-        cursor: "pointer",
-        border: isSelected ? "2px solid #6366F1" : "2px solid transparent",
-        borderRadius: "8px",
-        overflow: "hidden",
-        transition: "all 0.2s",
-        width: "100%",
+      styles={{
+        root: {
+          position: "relative",
+          cursor: "pointer",
+          border: isSelected ? "1px solid #6366F1" : "",
+          borderRadius: "8px",
+          overflow: "hidden",
+          transition: "all 0.2s",
+          width: "100%",
+          padding: "0",
+        },
       }}
     >
       {/* Progress bar */}
@@ -42,33 +59,90 @@ const ImageThumbnail = ({
         />
       )}
       <Image
-        src={image.url}
-        alt={image.name}
+        src={`https://api-label.tado.vn/api/images/${image.id}`}
+        alt={image.filename}
         height={120}
         fit="cover"
         style={{ width: "100%" }}
       />
-      <Text size="xs" p="xs" c="dimmed" truncate>
-        {image.name}
-      </Text>
-      <ActionIcon
-        color="red"
-        variant="filled"
-        size="md"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(image.id);
-        }}
+
+      <Text
+        size="xs"
+        p="xs"
         style={{
-          position: "absolute",
-          top: "4px",
-          right: "4px",
-          opacity: 0.9,
+          maxWidth: "280px",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
         }}
       >
-        <IconTrash size={14} />
-      </ActionIcon>
-    </div>
+        {image.filename}
+      </Text>
+      <Popover
+        width={240}
+        position="top-end"
+        opened={isOpen}
+        onChange={setIsOpen}
+        withArrow
+        shadow="md"
+        offset={{ mainAxis: 5, crossAxis: 10 }}
+      >
+        <Popover.Target>
+          <ActionIcon
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(true);
+            }}
+            color="red"
+            variant="filled"
+            size="md"
+            style={{
+              position: "absolute",
+              top: "4px",
+              right: "4px",
+              opacity: 0.9,
+            }}
+          >
+            <IconTrash size={14} />
+          </ActionIcon>
+        </Popover.Target>
+        <Popover.Dropdown
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <Text size="sm" c="red" style={{ marginBottom: "8px" }}>
+            Xác nhận xóa
+          </Text>
+          <Text size="xs" style={{ marginBottom: "8px" }}>
+            Hành động này không thể khôi phục xác nhận xóa
+          </Text>
+          <Flex justify="end" gap="xs">
+            <Button
+              size="xs"
+              variant="light"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              size="xs"
+              color="red"
+              variant="light"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(image.id);
+              }}
+            >
+              Xác nhận
+            </Button>
+          </Flex>
+        </Popover.Dropdown>
+      </Popover>
+    </Card>
   );
 };
 
