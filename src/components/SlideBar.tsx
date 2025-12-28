@@ -1,38 +1,32 @@
 import {
   ActionIcon,
+  Badge,
   Button,
   Card,
   Flex,
-  Group,
   MultiSelect,
   ScrollArea,
   Stack,
-  Tabs,
   Text,
   Textarea,
-  Badge,
   type MultiSelectProps,
 } from "@mantine/core";
-import {
-  Delete,
-  DeleteIcon,
-  Image,
-  Sparkles,
-  Tag,
-  Trash,
-  Upload,
-} from "lucide-react";
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import type { ImageType } from "../pages/ProjectOnly";
-import ImageThumbnail from "./ImageThumbnail";
-import imageApi from "../services/imageApi";
 import { notifications } from "@mantine/notifications";
+import axios from "axios";
+import { Image, Sparkles, Tag, Trash, Upload } from "lucide-react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import type { ProjectType } from "../pages/HomePage";
-import { IconTrash } from "@tabler/icons-react";
+import type { AnnotationType, ImageType } from "../pages/ProjectOnly";
+import imageApi from "../services/imageApi";
+import projectApi from "../services/projectApi";
+import ImageThumbnail from "./ImageThumbnail";
+import samApi from "../services/samApi";
 
 const Slidebar = ({
   project,
   setProject,
+  annotations,
+  setAnnotations,
   images,
   setImages,
   selectedImage,
@@ -41,17 +35,21 @@ const Slidebar = ({
 }: {
   project: ProjectType | null;
   setProject: Dispatch<SetStateAction<ProjectType | null>>;
+  annotations: AnnotationType[];
+  setAnnotations: Dispatch<SetStateAction<AnnotationType[]>>;
   images: ImageType[];
   setImages: Dispatch<SetStateAction<ImageType[]>>;
   selectedImage: ImageType | null;
-  setSelectedImage: (image: ImageType | null) => void;
+  setSelectedImage: Dispatch<SetStateAction<ImageType | null>>;
   handleSelectFileUpload: () => void;
 }) => {
+  const [loadingBtn, setLoadingBtn] = useState({ labelWithTextPromt: false });
   const [activeSection, setActiveSection] = useState("images");
 
-  const [projectLabels, setProjectLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState<string[]>([]);
   const [labelSerachInput, setLabelSearchInput] = useState("");
+
+  const [prompt, setPrompt] = useState<string>("");
 
   const deleteImage = async (id: string) => {
     try {
@@ -90,8 +88,17 @@ const Slidebar = ({
           <Text size="sm">{option.value}</Text>
         </Flex>
         <ActionIcon
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
+            if (!project?.id) return;
+
+            const newLabels = project.labels?.filter((l) => l != option.value);
+
+            await projectApi.updateProject(project.id, {
+              ...project,
+              labels: newLabels,
+            });
+            setProject((pre) => (pre ? { ...pre, labels: newLabels } : null));
           }}
           size="sm"
           color="red"
@@ -101,6 +108,56 @@ const Slidebar = ({
         </ActionIcon>
       </Flex>
     );
+  };
+
+  const handleUpdateLabels = async () => {
+    if (!project?.id || labelInput.includes(labelSerachInput.trim())) return;
+    try {
+      if (!project.labels.includes(labelSerachInput.trim())) {
+        const newLabels = [...project.labels, labelSerachInput.trim()];
+
+        await projectApi.updateProject(project?.id, {
+          ...project,
+          labels: newLabels,
+        });
+
+        setLabelInput((prev) => [...prev, labelSerachInput.trim()]);
+
+        setProject((pre) => (pre ? { ...pre, labels: newLabels } : null));
+
+        setLabelSearchInput("");
+      } else {
+        setLabelInput((prev) => [...prev, labelSerachInput.trim()]);
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          title: "Đã có lỗi xảy ra",
+          message: err.message,
+          color: "red",
+          position: "top-right",
+        });
+      }
+    }
+  };
+
+  const handleLabelWithTextPrompt = async () => {
+    if (loadingBtn.labelWithTextPromt) return;
+
+    setLoadingBtn((prev) => ({ ...prev, labelWithTextPromt: true }));
+    if (!selectedImage) return;
+    const res = await samApi.labelWithTextPrompt({
+      image_id: selectedImage.id,
+      prompts: [prompt],
+      labels: labelInput,
+    });
+
+    const data = res.data;
+    if (data?.annotations?.length > 0) {
+      setAnnotations(data?.annotations);
+    }
+
+    setLoadingBtn((prev) => ({ ...prev, labelWithTextPromt: false }));
   };
 
   return (
@@ -202,7 +259,14 @@ const Slidebar = ({
                     key={image.id}
                     image={image}
                     isSelected={selectedImage?.id === image.id}
-                    onSelect={() => setSelectedImage(image)}
+                    onSelect={() => {
+                      if (selectedImage?.id === image.id) {
+                        return;
+                      }
+
+                      setAnnotations([]);
+                      setSelectedImage(image);
+                    }}
                     onDelete={deleteImage}
                   />
                 ))}
@@ -234,6 +298,7 @@ const Slidebar = ({
 
           <Stack gap="md" style={{ flex: 1, padding: "16px", width: "100%" }}>
             <MultiSelect
+              variant="filled"
               label={
                 <Text
                   style={{ display: "inline-block", marginBottom: "8px" }}
@@ -250,21 +315,7 @@ const Slidebar = ({
               onSearchChange={setLabelSearchInput}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && labelSerachInput.trim() !== "") {
-                  if (labelInput.includes(labelSerachInput.trim())) return;
-
-                  if (!projectLabels.includes(labelSerachInput.trim())) {
-                    const newLabels = [
-                      ...projectLabels,
-                      labelSerachInput.trim(),
-                    ];
-                    setLabelInput((prev) => [...prev, labelSerachInput.trim()]);
-                    setProject((pre) =>
-                      pre ? { ...pre, labels: newLabels } : null
-                    );
-                    setLabelSearchInput("");
-                  } else {
-                    setLabelInput((prev) => [...prev, labelSerachInput.trim()]);
-                  }
+                  handleUpdateLabels();
                 }
               }}
               renderOption={renderMultiSelectOption}
@@ -274,6 +325,8 @@ const Slidebar = ({
               size="md"
             />
             <Textarea
+              required
+              variant="filled"
               label={
                 <Text
                   style={{ display: "inline-block", marginBottom: "8px" }}
@@ -282,6 +335,8 @@ const Slidebar = ({
                   Promt xử lý
                 </Text>
               }
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
               rows={5}
               placeholder="Nhập prompt xử lý"
             />
@@ -291,6 +346,10 @@ const Slidebar = ({
               color="violet"
               fullWidth
               size="md"
+              onClick={() => {
+                handleLabelWithTextPrompt();
+              }}
+              loading={loadingBtn.labelWithTextPromt}
             >
               Tìm đối tượng với AI
             </Button>

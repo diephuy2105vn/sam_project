@@ -1,23 +1,25 @@
-import { ActionIcon, Card } from "@mantine/core";
+import { ActionIcon, Card, Tooltip } from "@mantine/core";
 import { MousePointer2, Save, Trash2, Undo, WandSparkles } from "lucide-react";
 import type { AnnotationType, ImageType } from "../pages/ProjectOnly";
+import type { Dispatch, SetStateAction } from "react";
 
 const ListTool = ({
   selectedTool,
   setSelectedTool,
   selectedImage,
+  annotations,
+  setAnnotations,
   handleUndo,
-  handleSave,
   clearAll,
-  history,
 }: {
   selectedTool: string;
-  setSelectedTool: (tool: string) => void;
+  setSelectedTool: Dispatch<SetStateAction<string>>;
+  annotations: AnnotationType[];
+  setAnnotations: Dispatch<SetStateAction<AnnotationType[]>>;
   selectedImage: ImageType | null;
   handleUndo: () => void;
   handleSave: () => void;
   clearAll: () => void;
-  history: AnnotationType[][];
 }) => {
   return (
     <Card
@@ -25,53 +27,47 @@ const ListTool = ({
       padding="xs"
       radius="xl"
       withBorder
-      style={{ display: "flex", flexDirection: "row", gap: "4px" }}
+      style={{ display: "flex", flexDirection: "column", gap: "4px" }}
     >
       <ActionIcon
         variant={selectedTool === "mouse" ? "filled" : "subtle"}
         size="lg"
-        color="gray"
         onClick={() => setSelectedTool("mouse")}
-        disabled={!selectedImage || history?.length === 0}
+        disabled={!selectedImage}
       >
         <MousePointer2 size={18} />
       </ActionIcon>
       <ActionIcon
-        variant={selectedTool === "pointer" ? "filled" : "subtle"}
+        variant={selectedTool === "magic" ? "filled" : "subtle"}
         size="lg"
-        color="gray"
-        onClick={() => setSelectedTool("pointer")}
-        disabled={!selectedImage || history?.length === 0}
+        onClick={() => setSelectedTool("magic")}
+        disabled={!selectedImage}
       >
         <WandSparkles size={18} />
       </ActionIcon>
-      <ActionIcon
-        variant="subtle"
-        size="lg"
-        color="gray"
-        onClick={handleUndo}
-        disabled={!selectedImage || history?.length === 0}
-      >
-        <Undo size={18} />
-      </ActionIcon>
-      <ActionIcon
-        variant="subtle"
-        size="lg"
-        color="gray"
-        disabled={!selectedImage}
-        onClick={handleSave}
-      >
-        <Save size={18} />
-      </ActionIcon>
-      <ActionIcon
-        variant="subtle"
-        color="red"
-        size="lg"
-        disabled={!selectedImage}
-        onClick={clearAll}
-      >
-        <Trash2 size={18} />
-      </ActionIcon>
+
+      <Tooltip label="Khôi phục" color="gray">
+        <ActionIcon
+          variant="subtle"
+          size="lg"
+          onClick={handleUndo}
+          disabled={!selectedImage || annotations?.length <= 0}
+        >
+          <Undo size={18} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Xóa tất cả" color="red">
+        <ActionIcon
+          variant="subtle"
+          color="red"
+          size="lg"
+          onClick={clearAll}
+          disabled={!selectedImage || annotations?.length <= 0}
+        >
+          <Trash2 size={18} />
+        </ActionIcon>
+      </Tooltip>
     </Card>
   );
 };

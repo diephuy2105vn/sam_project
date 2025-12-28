@@ -1,0 +1,18 @@
+[data-mantine-color-scheme="light"] {
+  --bg-page: #f8fafc;
+}
+
+/* =========================
+   DARK MODE
+   ========================= */
+[data-mantine-color-scheme="dark"] {
+  --bg-page: #18181b;
+}
+
+/* =========================
+   APP SHELL
+   ========================= */
+.app-shell {
+  min-height: 100vh;
+  background-color: var(--bg-page);
+}

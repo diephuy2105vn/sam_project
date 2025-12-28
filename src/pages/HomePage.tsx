@@ -153,6 +153,7 @@ const HomePage = () => {
 
   return (
     <AppShell
+      className="app-shell"
       padding="md"
       styles={{
         main: {
@@ -230,7 +231,7 @@ const HomePage = () => {
                       key={project.id}
                       span={{ base: 12, sm: 6, md: 4 }}
                     >
-                      <Card shadow="md" padding="lg" radius="md">
+                      <Card withBorder shadow="md" padding="lg" radius="md">
                         {/* Content */}
                         <Stack gap="xs">
                           <Group justify="space-between" align="flex-start">
@@ -307,170 +308,165 @@ const HomePage = () => {
                   ))}
                 </Grid>
               ) : (
-                <Table
-                  highlightOnHover
-                  verticalSpacing="md"
-                  style={{
-                    borderRadius: 8,
-                    overflow: "hidden",
-                  }}
-                >
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th
-                        style={{
-                          fontWeight: 600,
-                          padding: "16px",
-                        }}
-                      >
-                        Tên dự án
-                      </Table.Th>
-                      <Table.Th
-                        style={{
-                          fontWeight: 600,
-                          padding: "16px",
-                        }}
-                      >
-                        Mô tả
-                      </Table.Th>
-                      <Table.Th
-                        style={{
-                          fontWeight: 600,
-                          padding: "16px",
-                        }}
-                      >
-                        Nhãn
-                      </Table.Th>
-                      <Table.Th
-                        style={{
-                          fontWeight: 600,
-                          padding: "16px",
-                        }}
-                      >
-                        Ngày tạo
-                      </Table.Th>
-                      <Table.Th
-                        style={{
-                          fontWeight: 600,
-                          padding: "16px",
-                          width: 100,
-                          textAlign: "center",
-                        }}
-                      >
-                        Thao tác
-                      </Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {filteredProjects.map((project) => (
-                      <Table.Tr
-                        key={project.id}
-                        style={{
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Table.Td
+                <Card shadow="sm" withBorder styles={{ root: { padding: 0 } }}>
+                  <Table verticalSpacing="md" striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th
                           style={{
+                            fontWeight: 600,
                             padding: "16px",
                           }}
                         >
-                          <Link
-                            to={`/project/${project.id}`}
-                            style={{ textDecoration: "none" }}
+                          Tên dự án
+                        </Table.Th>
+                        <Table.Th
+                          style={{
+                            fontWeight: 600,
+                            padding: "16px",
+                          }}
+                        >
+                          Mô tả
+                        </Table.Th>
+                        <Table.Th
+                          style={{
+                            fontWeight: 600,
+                            padding: "16px",
+                          }}
+                        >
+                          Nhãn
+                        </Table.Th>
+                        <Table.Th
+                          style={{
+                            fontWeight: 600,
+                            padding: "16px",
+                          }}
+                        >
+                          Ngày tạo
+                        </Table.Th>
+                        <Table.Th
+                          style={{
+                            fontWeight: 600,
+                            padding: "16px",
+                            width: 100,
+                            textAlign: "center",
+                          }}
+                        >
+                          Thao tác
+                        </Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {filteredProjects.map((project) => (
+                        <Table.Tr
+                          key={project.id}
+                          style={{
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Table.Td
+                            style={{
+                              padding: "16px",
+                            }}
                           >
-                            <Text size="sm" c="brand" fw="500">
-                              {project.name}
+                            <Link
+                              to={`/project/${project.id}`}
+                              style={{ textDecoration: "none" }}
+                            >
+                              <Text size="sm" c="brand" fw="500">
+                                {project.name}
+                              </Text>
+                            </Link>
+                          </Table.Td>
+                          <Table.Td
+                            style={{
+                              padding: "16px",
+                              maxWidth: 300,
+                            }}
+                          >
+                            <Text size="sm" c="dimmed" lineClamp={2}>
+                              {project.description || "—"}
                             </Text>
-                          </Link>
-                        </Table.Td>
-                        <Table.Td
-                          style={{
-                            padding: "16px",
-                            maxWidth: 300,
-                          }}
-                        >
-                          <Text size="sm" c="dimmed" lineClamp={2}>
-                            {project.description || "—"}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td
-                          style={{
-                            padding: "16px",
-                          }}
-                        >
-                          <Flex gap={4} wrap="wrap">
-                            {project.labels.length > 0 ? (
-                              project.labels.map((label, idx) => (
-                                <Badge
-                                  key={idx}
-                                  size="sm"
-                                  variant="dot"
-                                  color="gray"
-                                >
-                                  {label}
-                                </Badge>
-                              ))
-                            ) : (
+                          </Table.Td>
+                          <Table.Td
+                            style={{
+                              padding: "16px",
+                            }}
+                          >
+                            <Flex gap={4} wrap="wrap">
+                              {project.labels.length > 0 ? (
+                                project.labels.map((label, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    size="sm"
+                                    variant="dot"
+                                    color="gray"
+                                  >
+                                    {label}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <Text size="sm" c="dimmed">
+                                  —
+                                </Text>
+                              )}
+                            </Flex>
+                          </Table.Td>
+                          <Table.Td
+                            style={{
+                              padding: "16px",
+                            }}
+                          >
+                            {project.createdAt && (
                               <Text size="sm" c="dimmed">
-                                —
+                                {new Date(project.createdAt).toLocaleDateString(
+                                  "vi-VN"
+                                )}
                               </Text>
                             )}
-                          </Flex>
-                        </Table.Td>
-                        <Table.Td
-                          style={{
-                            padding: "16px",
-                          }}
-                        >
-                          {project.createdAt && (
-                            <Text size="sm" c="dimmed">
-                              {new Date(project.createdAt).toLocaleDateString(
-                                "vi-VN"
-                              )}
-                            </Text>
-                          )}
-                        </Table.Td>
-                        <Table.Td
-                          style={{
-                            padding: "16px",
-                          }}
-                        >
-                          <Flex justify="center">
-                            <Menu shadow="md" width={200}>
-                              <Menu.Target>
-                                <ActionIcon
-                                  variant="subtle"
-                                  color="gray"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <IconDots size={20} />
-                                </ActionIcon>
-                              </Menu.Target>
-                              <Menu.Dropdown>
-                                <Menu.Item
-                                  leftSection={<IconEdit size={16} />}
-                                  style={{}}
-                                >
-                                  Chỉnh sửa
-                                </Menu.Item>
-                                <Menu.Item
-                                  leftSection={<IconTrash size={16} />}
-                                  color="red"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeletingProject(project);
-                                  }}
-                                >
-                                  Xóa
-                                </Menu.Item>
-                              </Menu.Dropdown>
-                            </Menu>
-                          </Flex>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                          </Table.Td>
+                          <Table.Td
+                            style={{
+                              padding: "16px",
+                            }}
+                          >
+                            <Flex justify="center">
+                              <Menu shadow="md" width={200}>
+                                <Menu.Target>
+                                  <ActionIcon
+                                    variant="subtle"
+                                    color="gray"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <IconDots size={20} />
+                                  </ActionIcon>
+                                </Menu.Target>
+                                <Menu.Dropdown>
+                                  <Menu.Item
+                                    leftSection={<IconEdit size={16} />}
+                                    style={{}}
+                                  >
+                                    Chỉnh sửa
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    leftSection={<IconTrash size={16} />}
+                                    color="red"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingProject(project);
+                                    }}
+                                  >
+                                    Xóa
+                                  </Menu.Item>
+                                </Menu.Dropdown>
+                              </Menu>
+                            </Flex>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </Card>
               )
             ) : (
               <Stack align="center" gap="md" py={60}>
@@ -639,13 +635,12 @@ const HomePage = () => {
       >
         <Stack gap="md">
           <Text size="sm">
-            Bạn có chắc chắn muốn xóa dự án{" "}
+            Hành động này <b>không thể hoàn tác</b>. Bạn có chắc chắn muốn xóa
+            dự án{" "}
             <Text span fw={600}>
               {deletingProject?.name}
             </Text>
             ?
-            <br />
-            Hành động này <b>không thể hoàn tác</b>.
           </Text>
 
           <Group justify="flex-end">

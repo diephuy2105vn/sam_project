@@ -20,6 +20,8 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
+      "react-hooks/set-state-in-effect": "off",
+      "react/no-unstable-nested-components": "off",
       "react-hooks/exhaustive-deps": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",

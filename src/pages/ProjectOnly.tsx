@@ -8,6 +8,9 @@ import { useParams } from "react-router-dom";
 import imageApi from "../services/imageApi";
 import projectApi from "../services/projectApi";
 import type { ProjectType } from "./HomePage";
+import samApi from "../services/samApi";
+import { notifications } from "@mantine/notifications";
+import axios from "axios";
 
 export type ImageType = {
   id: string;
@@ -28,7 +31,7 @@ export type AnnotationType = {
 
 const ProjectOnly = () => {
   const [images, setImages] = useState<ImageType[]>([]);
-  const [selectedTool, setSelectedTool] = useState("");
+  const [selectedTool, setSelectedTool] = useState("mouse");
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
   const [history, setHistory] = useState<AnnotationType[][]>([]);
@@ -39,15 +42,77 @@ const ProjectOnly = () => {
   const fetchProject = async () => {
     if (!projectId) return;
 
-    const res = await projectApi.getProjectById(projectId);
-    setProject(res.data);
+    try {
+      const res = await projectApi.getProjectById(projectId);
+
+      setProject(res.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: err.response?.data?.message || err.message,
+          position: "top-right",
+        });
+      } else {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: "Lỗi không xác định",
+          position: "top-right",
+        });
+      }
+    }
   };
 
   const fetchProjectImages = async () => {
     if (!projectId) return;
+    try {
+      const res = await imageApi.getProjectImages(projectId);
 
-    const res = await imageApi.getProjectImages(projectId);
-    setImages(res.data);
+      setImages(res.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: err.response?.data?.message || err.message,
+          position: "top-right",
+        });
+      } else {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: "Lỗi không xác định",
+          position: "top-right",
+        });
+      }
+    }
+  };
+
+  const fetchAnnotations = async () => {
+    if (!selectedImage?.id) return;
+    try {
+      const res = await samApi.getImageAnnotations(selectedImage?.id);
+
+      setAnnotations(res.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: err.response?.data?.message || err.message,
+          position: "top-right",
+        });
+      } else {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: "Lỗi không xác định",
+          position: "top-right",
+        });
+      }
+    }
   };
 
   const uploadSingleImage = async (image: ImageType) => {
@@ -121,26 +186,37 @@ const ProjectOnly = () => {
   };
 
   useEffect(() => {
+    if (selectedImage) {
+      fetchAnnotations();
+    }
+  }, [selectedImage]);
+
+  useEffect(() => {
     fetchProject();
     fetchProjectImages();
-  }, []);
+  }, [projectId]);
 
-  const handleUndo = () => {
-    if (history.length > 0) {
-      const previousState = history[history.length - 1];
-      setAnnotations(previousState);
-      setHistory(history.slice(0, -1));
+  const handleUndo = async () => {
+    if (annotations.length > 0) {
+      const endAnnotation = annotations[annotations.length - 1];
+
+      await samApi.deleteAnnotation(endAnnotation.id);
+
+      setAnnotations((pre) => pre.filter((ann) => ann.id !== endAnnotation.id));
     }
   };
 
   const clearAll = () => {
-    setHistory([...history, annotations]);
-    setAnnotations([]);
+    if (annotations.length > 0) {
+      annotations.forEach(async (ann) => {
+        await samApi.deleteAnnotation(ann.id);
+      });
+
+      setAnnotations([]);
+    }
   };
 
   const handleSave = () => {};
-
-  useEffect(() => {}, []);
 
   return (
     <AppShell
@@ -165,6 +241,8 @@ const ProjectOnly = () => {
         <Slidebar
           project={project}
           setProject={setProject}
+          annotations={annotations}
+          setAnnotations={setAnnotations}
           images={images}
           setImages={setImages}
           selectedImage={selectedImage}
@@ -181,22 +259,22 @@ const ProjectOnly = () => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            minHeight: "calc(100vh - 24px)",
+            height: "calc(100vh - 32px)",
             position: "relative",
           }}
         >
           {selectedImage ? (
-            <Flex gap="md" direction="column" align="center">
-              <ListTool
-                selectedTool={selectedTool}
-                selectedImage={selectedImage}
-                setSelectedTool={setSelectedTool}
-                handleUndo={handleUndo}
-                handleSave={handleSave}
-                clearAll={clearAll}
-                history={history}
-              />
+            <Flex
+              gap="md"
+              direction="column"
+              align="center"
+              style={{ width: "100%", height: "100%" }}
+            >
               <ImageAnnotationTool
+                project={project}
+                setProject={setProject}
+                annotations={annotations}
+                setAnnotations={setAnnotations}
                 image={selectedImage}
                 selectedTool={selectedTool}
                 onSave={() => {}}
@@ -225,7 +303,18 @@ const ProjectOnly = () => {
               right: "8px",
               transform: "translateY(-50%)",
             }}
-          ></div>
+          >
+            <ListTool
+              selectedTool={selectedTool}
+              selectedImage={selectedImage}
+              setSelectedTool={setSelectedTool}
+              handleUndo={handleUndo}
+              handleSave={handleSave}
+              clearAll={clearAll}
+              annotations={annotations}
+              setAnnotations={setAnnotations}
+            />
+          </div>
         </div>
       </AppShell.Main>
     </AppShell>

@@ -7,11 +7,10 @@ import {
   Popover,
   Progress,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
-import type { ImageType } from "../pages/ProjectOnly";
 import { useState } from "react";
+import type { ImageType } from "../pages/ProjectOnly";
 const ImageThumbnail = ({
   image,
   isSelected,
@@ -37,6 +36,7 @@ const ImageThumbnail = ({
           borderRadius: "8px",
           overflow: "hidden",
           transition: "all 0.2s",
+
           width: "100%",
           padding: "0",
         },
