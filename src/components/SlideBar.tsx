@@ -101,7 +101,12 @@ const Slidebar = ({
         style={{ width: "100%" }}
       >
         <Flex justify="start" align="center">
-          <Text size="sm">{option.value}</Text>
+          <Text
+            size="sm"
+            style={{ width: "100%", overflow: "hidden", textWrap: "wrap" }}
+          >
+            {option.value}
+          </Text>
         </Flex>
         <ActionIcon
           onClick={async (e) => {
@@ -165,7 +170,21 @@ const Slidebar = ({
   };
 
   const handleLabelWithTextPrompt = async () => {
-    if (!selectedImage || loadingBtn.labelWithTextPromt) return;
+    console.log("call");
+    if (!selectedImage || loadingBtn.labelWithTextPromt) {
+      return;
+    }
+
+    console.log("call");
+    if (labelInput.length <= 0) {
+      notifications.show({
+        color: "yellow",
+        title: "Thiếu nhãn",
+        message: "Vui lòng chọn nhãn cần tìm.",
+        position: "top-right",
+      });
+      return;
+    }
 
     const promptsArray = labelInput.map((label) => prompts[label] || "");
 
@@ -178,6 +197,7 @@ const Slidebar = ({
         color: "yellow",
         title: "Thiếu prompt",
         message: "Vui lòng nhập prompt cho tất cả label trước khi tiếp tục.",
+        position: "top-right",
       });
       return;
     }
@@ -266,7 +286,7 @@ const Slidebar = ({
               <Home size={24} />
             </Button>
           </Link>
-          <Flex m="sm" gap={8}>
+          <Flex m="sm" gap={8} align={"center"}>
             <Select
               placeholder="Chọn dự án"
               size="sm"
@@ -297,16 +317,15 @@ const Slidebar = ({
                 },
               }}
             />
-            <Button
+            <ActionIcon
               onClick={() => {
                 handleExportProject();
               }}
               loading={loadingBtn.exportProject}
-              size="sm"
-              rightSection={<Download size={16} />}
+              size="lg"
             >
-              Export
-            </Button>
+              <Download size={20} />
+            </ActionIcon>
           </Flex>
         </Flex>
       </div>
@@ -332,7 +351,7 @@ const Slidebar = ({
             style={{
               borderRadius: "0 8px 8px 0px",
               width: "100%",
-              padding: "4px",
+              padding: "8px 0",
               maxHeight: "auto",
               height: "auto",
             }}
@@ -352,7 +371,7 @@ const Slidebar = ({
             style={{
               borderRadius: "0 8px 8px 0px",
               width: "100%",
-              padding: "4px",
+              padding: "8px 0",
               maxHeight: "auto",
               height: "auto",
             }}
@@ -364,11 +383,34 @@ const Slidebar = ({
               </Text>
             </Flex>
           </Button>
+          <Button
+            onClick={() => handleExportProject()}
+            variant="subtle"
+            size="lg"
+            style={{
+              borderRadius: "0 8px 8px 0px",
+              width: "100%",
+              padding: "8px 0",
+              maxHeight: "auto",
+              height: "auto",
+            }}
+            loading={loadingBtn.exportProject}
+          >
+            <Flex direction="column" align="center" gap={6}>
+              <Download size={24} />
+              <Text size="xs" fw={500}>
+                Download
+              </Text>
+            </Flex>
+          </Button>
         </Flex>
 
         {/* Content Panel */}
         {activeSection === "images" ? (
-          <Flex direction={"column"} style={{ flex: 1 }}>
+          <Flex
+            direction={"column"}
+            style={{ flex: 1, height: "calc(100vh - 60px)" }}
+          >
             <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
               <Text size="xl" fw={700} mb="md">
                 Danh sách ảnh
@@ -378,7 +420,7 @@ const Slidebar = ({
                 leftSection={<Upload size={20} />}
                 onClick={() => handleSelectFileUpload()}
                 fullWidth
-                size="md"
+                size="sm"
               >
                 Upload Ảnh
               </Button>
@@ -419,23 +461,39 @@ const Slidebar = ({
             </ScrollArea>
           </Flex>
         ) : (
-          <Flex direction={"column"} style={{ flex: 1 }}>
-            <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
+          <Flex
+            direction={"column"}
+            style={{ flex: 1, maxHeight: "calc(100vh - 60px)" }}
+          >
+            <Flex
+              direction={"column"}
+              style={{ borderBottom: "1px solid #2c2e33" }}
+              p="sm"
+            >
               <Text size="xl" fw={700} mb="md">
                 Danh sách nhãn
               </Text>
-              <Flex gap="4">
-                {selectedProject?.labels.map((label, idx) => (
-                  <Badge key={idx} size="sm" variant="dot" color="brand">
-                    {label}
-                  </Badge>
-                ))}
+              <Flex gap="4" style={{ maxWidth: "100%", overflow: "hidden" }}>
+                <Badge size="md" variant="dot" color="brand">
+                  {selectedProject?.labels?.length || 0} nhãn
+                </Badge>
               </Flex>
-            </div>
+            </Flex>
 
-            <Stack gap="md" style={{ flex: 1, padding: "16px", width: "100%" }}>
+            <Flex p="sm">
               <MultiSelect
                 variant="filled"
+                styles={{
+                  root: { width: "100%" },
+                  input: { width: "100%" },
+                  pillsList: {
+                    flexWrap: "wrap",
+                    width: "100%",
+                  },
+                  pill: {
+                    maxWidth: "200px",
+                  },
+                }}
                 label={
                   <Text
                     style={{ display: "inline-block", marginBottom: "8px" }}
@@ -461,7 +519,10 @@ const Slidebar = ({
                 searchable
                 size="md"
               />
-              <ScrollArea style={{ maxHeight: "50vh" }}>
+            </Flex>
+
+            {labelInput.length > 0 && (
+              <ScrollArea p="sm">
                 {labelInput?.map((label, index) => (
                   <Textarea
                     key={index}
@@ -469,7 +530,11 @@ const Slidebar = ({
                     variant="filled"
                     label={
                       <Text
-                        style={{ display: "inline-block", marginBottom: "8px" }}
+                        style={{
+                          display: "inline-block",
+                          textWrap: "wrap",
+                          marginBottom: "8px",
+                        }}
                         size="sm"
                       >
                         Promt xử lý của {label}
@@ -489,10 +554,12 @@ const Slidebar = ({
                   />
                 ))}
               </ScrollArea>
+            )}
+
+            <Flex p="sm">
               <Button
                 leftSection={<Sparkles size={20} />}
                 variant="light"
-                color="violet"
                 fullWidth
                 size="md"
                 onClick={() => {
@@ -502,7 +569,7 @@ const Slidebar = ({
               >
                 Tìm đối tượng với AI
               </Button>
-            </Stack>
+            </Flex>
           </Flex>
         )}
       </Flex>
