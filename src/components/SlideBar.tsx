@@ -167,8 +167,6 @@ const Slidebar = ({
   const handleLabelWithTextPrompt = async () => {
     if (!selectedImage || loadingBtn.labelWithTextPromt) return;
 
-    setLoadingBtn((prev) => ({ ...prev, labelWithTextPromt: true }));
-
     const promptsArray = labelInput.map((label) => prompts[label] || "");
 
     const hasEmptyPrompt = promptsArray.some(
@@ -183,6 +181,8 @@ const Slidebar = ({
       });
       return;
     }
+
+    setLoadingBtn((prev) => ({ ...prev, labelWithTextPromt: true }));
 
     const res = await samApi.labelWithTextPrompt({
       image_id: selectedImage.id,
