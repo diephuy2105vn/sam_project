@@ -1,16 +1,16 @@
 import { AppShell, Button, Flex, Stack, Text } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { IconPhoto, IconUpload } from "@tabler/icons-react";
+import axios from "axios";
 import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import ImageAnnotationTool from "../components/ImageAnnotationTool";
 import ListTool from "../components/ListTool";
 import Slidebar from "../components/SlideBar";
-import { useParams } from "react-router-dom";
 import imageApi from "../services/imageApi";
 import projectApi from "../services/projectApi";
-import type { ProjectType } from "./HomePage";
 import samApi from "../services/samApi";
-import { notifications } from "@mantine/notifications";
-import axios from "axios";
+import type { ProjectType } from "./HomePage";
 
 export type ImageType = {
   id: string;
@@ -20,24 +20,70 @@ export type ImageType = {
   uploading?: boolean;
 };
 
-export type AnnotationType = {
-  id: string;
+// 1️⃣ Point trong mask (tọa độ x, y)
+export type Point = [number, number];
+
+// 2️⃣ SAM result
+export interface SamResult {
+  mask: Point[];
+  mask_shape: [number, number];
+  success: boolean;
+}
+
+// 3️⃣ Prompt data (có thể mở rộng sau)
+export interface PromptData {
+  text: string;
+}
+
+// 4️⃣ Annotation type (nếu sau này có thêm loại khác)
+export type AnnotationKind = "text_prompt";
+
+// 5️⃣ Annotation chính
+export interface AnnotationType {
+  id: number;
+  image_id: number;
   label: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+  annotation_type: AnnotationKind;
+  prompt_data: PromptData;
+  sam_result: SamResult;
+  bbox: [number, number, number, number]; // [x1, y1, x2, y2]
+  confidence: number;
+  created_at: string; // ISO string
+}
 
 const ProjectOnly = () => {
   const [images, setImages] = useState<ImageType[]>([]);
+  const [projects, setProjects] = useState<ProjectType[]>([]);
   const [selectedTool, setSelectedTool] = useState("mouse");
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [annotations, setAnnotations] = useState<AnnotationType[]>([]);
-  const [history, setHistory] = useState<AnnotationType[][]>([]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [project, setProject] = useState<ProjectType | null>(null);
   const { projectId } = useParams<{ projectId: string }>();
+  const fetchProjects = async () => {
+    try {
+      const res = await projectApi.getProject();
+
+      setProjects(res.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: err.response?.data?.message || err.message,
+          position: "top-right",
+        });
+      } else {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: "Lỗi không xác định",
+          position: "top-right",
+        });
+      }
+    }
+  };
 
   const fetchProject = async () => {
     if (!projectId) return;
@@ -118,23 +164,17 @@ const ProjectOnly = () => {
   const uploadSingleImage = async (image: ImageType) => {
     if (!projectId) return;
 
-    //Call upload and update list images
     const formData = new FormData();
 
     formData.append("files", image.file);
 
-    try {
-      const res = await imageApi.uploadImages(projectId, formData);
-      console.log(res);
-      const uploadedImages = res.data.images;
-      if (uploadedImages.length > 0) {
-        setImages((pre) =>
-          pre.map((img) => (img.id === image.id ? res.data.images[0] : img))
-        );
-      }
-    } catch (error) {
-      console.error("Upload image failed:", error);
-      throw error;
+    const res = await imageApi.uploadImages(projectId, formData);
+
+    const uploadedImages = res.data.images;
+    if (uploadedImages.length > 0) {
+      setImages((pre) =>
+        pre.map((img) => (img.id === image.id ? res.data.images[0] : img))
+      );
     }
   };
 
@@ -194,13 +234,18 @@ const ProjectOnly = () => {
   useEffect(() => {
     fetchProject();
     fetchProjectImages();
+    setSelectedImage(null);
   }, [projectId]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   const handleUndo = async () => {
     if (annotations.length > 0) {
       const endAnnotation = annotations[annotations.length - 1];
 
-      await samApi.deleteAnnotation(endAnnotation.id);
+      await samApi.deleteAnnotation(endAnnotation.id.toString());
 
       setAnnotations((pre) => pre.filter((ann) => ann.id !== endAnnotation.id));
     }
@@ -209,7 +254,7 @@ const ProjectOnly = () => {
   const clearAll = () => {
     if (annotations.length > 0) {
       annotations.forEach(async (ann) => {
-        await samApi.deleteAnnotation(ann.id);
+        await samApi.deleteAnnotation(ann.id.toString());
       });
 
       setAnnotations([]);
@@ -239,8 +284,9 @@ const ProjectOnly = () => {
         />
 
         <Slidebar
-          project={project}
-          setProject={setProject}
+          projects={projects}
+          selectedProject={project}
+          setSelectedProject={setProject}
           annotations={annotations}
           setAnnotations={setAnnotations}
           images={images}
@@ -277,7 +323,6 @@ const ProjectOnly = () => {
                 setAnnotations={setAnnotations}
                 image={selectedImage}
                 selectedTool={selectedTool}
-                onSave={() => {}}
               />
             </Flex>
           ) : (
@@ -305,9 +350,12 @@ const ProjectOnly = () => {
             }}
           >
             <ListTool
+              images={images}
+              setImages={setImages}
               selectedTool={selectedTool}
-              selectedImage={selectedImage}
               setSelectedTool={setSelectedTool}
+              selectedImage={selectedImage}
+              setSelectedIamge={setSelectedImage}
               handleUndo={handleUndo}
               handleSave={handleSave}
               clearAll={clearAll}

@@ -1,6 +1,5 @@
 import {
   ActionIcon,
-  Badge,
   Button,
   Card,
   Flex,
@@ -32,11 +31,6 @@ type BoundingBoxType = {
   label: string;
 };
 
-type PointType = {
-  x: number;
-  y: number;
-};
-
 const ImageAnnotationTool = ({
   project,
   setProject,
@@ -44,7 +38,6 @@ const ImageAnnotationTool = ({
   annotations,
   setAnnotations,
   selectedTool,
-  onSave,
 }: {
   project: ProjectType | null;
   setProject: Dispatch<SetStateAction<ProjectType | null>>;
@@ -52,7 +45,6 @@ const ImageAnnotationTool = ({
   annotations: AnnotationType[];
   setAnnotations: Dispatch<SetStateAction<AnnotationType[]>>;
   selectedTool: string;
-  onSave: () => void;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +64,7 @@ const ImageAnnotationTool = ({
   const [pointToLabel, setPointToLabel] = useState<number[][]>([]);
 
   const handleUpdateLabels = async () => {
-    if (!project?.id || labelInput.includes(labelSerachInput.trim())) return;
+    if (!project?.id || labelInput?.includes(labelSerachInput.trim())) return;
     try {
       if (!project.labels.includes(labelSerachInput.trim())) {
         const newLabels = [...project.labels, labelSerachInput.trim()];
@@ -134,8 +126,6 @@ const ImageAnnotationTool = ({
 
     const canvas = canvasRef.current;
     if (!canvas || !imageRef.current) {
-      console.log("Canvas", canvas);
-      console.log("Image:", imageRef);
       return;
     }
 
@@ -240,7 +230,6 @@ const ImageAnnotationTool = ({
 
   // Draw annotations on canvas or calculate positions for point mode
   useEffect(() => {
-    console.log("Call Draw anotations");
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container || !image) return;
@@ -289,7 +278,7 @@ const ImageAnnotationTool = ({
               if (y > maxY) maxY = y;
             });
             boundingBoxs.push({
-              id: annotation.id,
+              id: annotation.id.toString(),
               x: minX,
               y: minY,
               width: maxX - minX,
@@ -332,7 +321,6 @@ const ImageAnnotationTool = ({
   }, [annotations, image, selectedTool, containerSize]);
 
   useEffect(() => {
-    console.log("Call set point");
     setPointToLabel([]);
   }, [selectedTool, image]);
 
@@ -360,7 +348,9 @@ const ImageAnnotationTool = ({
 
   const handleDeleteAnnotation = async (id: string) => {
     await samApi.deleteAnnotation(id);
-    setAnnotations((prev) => prev.filter((ann) => ann.id !== id));
+    setAnnotations((prev) =>
+      prev.filter((ann) => ann.id.toString() !== id.toString())
+    );
   };
 
   return (
@@ -425,17 +415,18 @@ const ImageAnnotationTool = ({
                       zIndex: "1",
                     }}
                   >
-                    <Badge
+                    <Flex
                       style={{
+                        padding: "2px 4px",
                         position: "absolute",
                         top: "0",
                         left: "0",
                       }}
+                      bg={"brand"}
                       color="brand"
-                      radius={0}
                     >
                       <Text size="xs"> {box.label}</Text>
-                    </Badge>
+                    </Flex>
                   </div>
                   <ActionIcon
                     style={{
@@ -447,12 +438,12 @@ const ImageAnnotationTool = ({
                     }}
                     radius={0}
                     color="red"
-                    size={"sm"}
+                    size={"xs"}
                     onClick={() => {
                       handleDeleteAnnotation(box.id);
                     }}
                   >
-                    <Trash size={16} />
+                    <Trash size={14} />
                   </ActionIcon>
                 </>
               ))}

@@ -6,6 +6,7 @@ import {
   Flex,
   MultiSelect,
   ScrollArea,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -13,19 +14,30 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import axios from "axios";
-import { Image, Sparkles, Tag, Trash, Upload } from "lucide-react";
+import {
+  Download,
+  Home,
+  Image,
+  Sparkles,
+  Tag,
+  Trash,
+  Upload,
+} from "lucide-react";
 import { useState, type Dispatch, type SetStateAction } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import type { ProjectType } from "../pages/HomePage";
 import type { AnnotationType, ImageType } from "../pages/ProjectOnly";
+import exportApi from "../services/exportApi";
 import imageApi from "../services/imageApi";
 import projectApi from "../services/projectApi";
-import ImageThumbnail from "./ImageThumbnail";
 import samApi from "../services/samApi";
+import ImageThumbnail from "./ImageThumbnail";
 
 const Slidebar = ({
-  project,
-  setProject,
-  annotations,
+  projects,
+  selectedProject,
+  setSelectedProject,
+  annotations: _annotations,
   setAnnotations,
   images,
   setImages,
@@ -33,8 +45,9 @@ const Slidebar = ({
   setSelectedImage,
   handleSelectFileUpload,
 }: {
-  project: ProjectType | null;
-  setProject: Dispatch<SetStateAction<ProjectType | null>>;
+  projects: ProjectType[];
+  selectedProject: ProjectType | null;
+  setSelectedProject: Dispatch<SetStateAction<ProjectType | null>>;
   annotations: AnnotationType[];
   setAnnotations: Dispatch<SetStateAction<AnnotationType[]>>;
   images: ImageType[];
@@ -43,13 +56,16 @@ const Slidebar = ({
   setSelectedImage: Dispatch<SetStateAction<ImageType | null>>;
   handleSelectFileUpload: () => void;
 }) => {
-  const [loadingBtn, setLoadingBtn] = useState({ labelWithTextPromt: false });
-  const [activeSection, setActiveSection] = useState("images");
+  const navigator = useNavigate();
 
+  const [loadingBtn, setLoadingBtn] = useState({
+    exportProject: false,
+    labelWithTextPromt: false,
+  });
+  const [activeSection, setActiveSection] = useState("images");
   const [labelInput, setLabelInput] = useState<string[]>([]);
   const [labelSerachInput, setLabelSearchInput] = useState("");
-
-  const [prompt, setPrompt] = useState<string>("");
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
 
   const deleteImage = async (id: string) => {
     try {
@@ -64,7 +80,7 @@ const Slidebar = ({
         title: "Xóa ảnh thành công",
         message: "",
       });
-    } catch (err) {
+    } catch (_err) {
       notifications.show({
         position: "top-right",
         color: "red",
@@ -90,15 +106,19 @@ const Slidebar = ({
         <ActionIcon
           onClick={async (e) => {
             e.stopPropagation();
-            if (!project?.id) return;
+            if (!selectedProject?.id) return;
 
-            const newLabels = project.labels?.filter((l) => l != option.value);
+            const newLabels = selectedProject.labels?.filter(
+              (l) => l != option.value
+            );
 
-            await projectApi.updateProject(project.id, {
-              ...project,
+            await projectApi.updateProject(selectedProject.id, {
+              ...selectedProject,
               labels: newLabels,
             });
-            setProject((pre) => (pre ? { ...pre, labels: newLabels } : null));
+            setSelectedProject((pre) =>
+              pre ? { ...pre, labels: newLabels } : null
+            );
           }}
           size="sm"
           color="red"
@@ -111,19 +131,22 @@ const Slidebar = ({
   };
 
   const handleUpdateLabels = async () => {
-    if (!project?.id || labelInput.includes(labelSerachInput.trim())) return;
+    if (!selectedProject?.id || labelInput.includes(labelSerachInput.trim()))
+      return;
     try {
-      if (!project.labels.includes(labelSerachInput.trim())) {
-        const newLabels = [...project.labels, labelSerachInput.trim()];
+      if (!selectedProject.labels.includes(labelSerachInput.trim())) {
+        const newLabels = [...selectedProject.labels, labelSerachInput.trim()];
 
-        await projectApi.updateProject(project?.id, {
-          ...project,
+        await projectApi.updateProject(selectedProject?.id, {
+          ...selectedProject,
           labels: newLabels,
         });
 
         setLabelInput((prev) => [...prev, labelSerachInput.trim()]);
 
-        setProject((pre) => (pre ? { ...pre, labels: newLabels } : null));
+        setSelectedProject((pre) =>
+          pre ? { ...pre, labels: newLabels } : null
+        );
 
         setLabelSearchInput("");
       } else {
@@ -142,221 +165,348 @@ const Slidebar = ({
   };
 
   const handleLabelWithTextPrompt = async () => {
-    if (loadingBtn.labelWithTextPromt) return;
+    if (!selectedImage || loadingBtn.labelWithTextPromt) return;
 
     setLoadingBtn((prev) => ({ ...prev, labelWithTextPromt: true }));
-    if (!selectedImage) return;
+
+    const promptsArray = labelInput.map((label) => prompts[label] || "");
+
+    const hasEmptyPrompt = promptsArray.some(
+      (prompt) => !prompt || prompt.length === 0
+    );
+
+    if (hasEmptyPrompt) {
+      notifications.show({
+        color: "yellow",
+        title: "Thiếu prompt",
+        message: "Vui lòng nhập prompt cho tất cả label trước khi tiếp tục.",
+      });
+      return;
+    }
+
     const res = await samApi.labelWithTextPrompt({
       image_id: selectedImage.id,
-      prompts: [prompt],
       labels: labelInput,
+      prompts: promptsArray,
     });
 
     const data = res.data;
     if (data?.annotations?.length > 0) {
-      setAnnotations(data?.annotations);
+      setAnnotations((pre) => [...pre, ...data.annotations]);
     }
 
     setLoadingBtn((prev) => ({ ...prev, labelWithTextPromt: false }));
   };
 
+  const handleExportProject = async () => {
+    if (!selectedProject?.id) return;
+
+    setLoadingBtn((prev) => ({ ...prev, exportProject: true }));
+    try {
+      const res = await exportApi.exportProject(selectedProject.id);
+      if (res.data.success) {
+        const downloadUrl = res.data.download_url;
+        const fullUrl = `${window.location.origin}${downloadUrl}`;
+
+        const link = document.createElement("a");
+        link.href = fullUrl;
+        link.download = ""; // để browser tự lấy tên file
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        notifications.show({
+          title: "Đã có lỗi xảy ra",
+          message: err.message,
+          color: "red",
+          position: "top-right",
+        });
+      }
+    }
+
+    setLoadingBtn((prev) => ({ ...prev, exportProject: false }));
+  };
+
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        color: "white",
+    <Card
+      radius={0}
+      withBorder
+      styles={{
+        root: {
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          padding: 0,
+          height: "100%",
+        },
       }}
     >
-      {/* Left Sidebar Navigation */}
-      <Flex
-        direction="column"
-        gap={12}
-        style={{ borderRight: "1px solid #2c2e33", padding: "16px 0" }}
+      {/* Project Selector Header - Ở trên cùng */}
+      <div
+        style={{
+          borderBottom: "1px solid #2c2e33",
+          backgroundColor: "var(--mantine-color-dark-7)",
+        }}
       >
-        <Button
-          onClick={() => setActiveSection("images")}
-          variant={activeSection === "images" ? "filled" : "subtle"}
-          size="lg"
-          style={{
-            borderRadius: "0 8px 8px 0px",
-            padding: "4px 20px",
-            maxHeight: "auto",
-            height: "auto",
-          }}
+        <Flex
+          align={"center"}
+          justify={"space-between"}
+          style={{ height: "60px" }}
         >
-          <Flex direction="column" align="center" gap={6}>
-            <Image size={24} />
-            <Text size="xs" fw={500}>
-              Images
-            </Text>
-          </Flex>
-        </Button>
-
-        <Button
-          onClick={() => setActiveSection("labels")}
-          variant={activeSection === "labels" ? "filled" : "subtle"}
-          size="lg"
-          style={{
-            borderRadius: "0 8px 8px 0px",
-            padding: "4px 20px",
-            maxHeight: "auto",
-            height: "auto",
-          }}
-        >
-          <Flex direction="column" align="center" gap={6}>
-            <Tag size={24} />
-            <Text size="xs" fw={500}>
-              Labels
-            </Text>
-          </Flex>
-        </Button>
-      </Flex>
-
-      {/* Content Panel */}
-      {activeSection === "images" ? (
-        <Card
-          styles={{
-            root: {
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              padding: 0,
-            },
-          }}
-        >
-          <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
-            <Text size="xl" fw={700} mb="md">
-              Danh sách ảnh
-            </Text>
-
+          <Link to="/">
             <Button
-              leftSection={<Upload size={20} />}
-              onClick={() => handleSelectFileUpload()}
-              fullWidth
+              variant="subtle"
               size="md"
+              style={{
+                width: "80px",
+              }}
             >
-              Upload Ảnh
+              <Home size={24} />
             </Button>
-          </div>
-
-          <ScrollArea style={{ flex: 1, padding: "16px", width: "100%" }}>
-            <Text size="sm" fw={500} c="dimmed" mb="md">
-              Ảnh đã tải ({images.length})
-            </Text>
-
-            {images.length === 0 ? (
-              <Stack align="center" gap="xs" style={{ padding: "64px 0" }}>
-                <Image size={48} color="gray" strokeWidth={1.5} />
-                <Text size="sm" c="dimmed">
-                  Chưa có ảnh nào
-                </Text>
-              </Stack>
-            ) : (
-              <Stack gap="xs" style={{ width: "100%" }}>
-                {images.map((image: ImageType) => (
-                  <ImageThumbnail
-                    key={image.id}
-                    image={image}
-                    isSelected={selectedImage?.id === image.id}
-                    onSelect={() => {
-                      if (selectedImage?.id === image.id) {
-                        return;
-                      }
-
-                      setAnnotations([]);
-                      setSelectedImage(image);
-                    }}
-                    onDelete={deleteImage}
-                  />
-                ))}
-              </Stack>
-            )}
-          </ScrollArea>
-        </Card>
-      ) : (
-        <Card
-          styles={{
-            root: {
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              padding: 0,
-            },
-          }}
-        >
-          <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
-            <Text size="xl" fw={700} mb="md">
-              Danh sách nhãn
-            </Text>
-            {project?.labels.map((label, idx) => (
-              <Badge key={idx} size="sm" variant="dot" color="gray">
-                {label}
-              </Badge>
-            ))}
-          </div>
-
-          <Stack gap="md" style={{ flex: 1, padding: "16px", width: "100%" }}>
-            <MultiSelect
-              variant="filled"
-              label={
-                <Text
-                  style={{ display: "inline-block", marginBottom: "8px" }}
-                  size="sm"
-                >
-                  Danh sách nhãn
-                </Text>
-              }
-              required
-              data={project?.labels ? project.labels : []}
-              value={labelInput ? labelInput : []}
-              onChange={(value) => setLabelInput(value)}
-              searchValue={labelSerachInput}
-              onSearchChange={setLabelSearchInput}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && labelSerachInput.trim() !== "") {
-                  handleUpdateLabels();
+          </Link>
+          <Flex m="sm" gap={8}>
+            <Select
+              placeholder="Chọn dự án"
+              size="sm"
+              value={selectedProject?.id?.toString()}
+              onChange={(value) => {
+                const project = projects.find(
+                  (p) => p.id?.toString() === value?.toString()
+                );
+                if (project) {
+                  navigator(`/project/${project.id}`);
                 }
               }}
-              renderOption={renderMultiSelectOption}
-              placeholder="Enter để thêm nhãn mới"
-              hidePickedOptions
-              searchable
-              size="md"
-            />
-            <Textarea
-              required
-              variant="filled"
-              label={
-                <Text
-                  style={{ display: "inline-block", marginBottom: "8px" }}
-                  size="sm"
-                >
-                  Promt xử lý
-                </Text>
+              data={
+                projects
+                  ? projects?.map((pro) => ({
+                      value: pro.id ? pro.id.toString() : "",
+                      label: pro.name,
+                    }))
+                  : []
               }
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={5}
-              placeholder="Nhập prompt xử lý"
+              searchable
+              styles={{
+                root: {
+                  flex: "1",
+                },
+                input: {
+                  fontWeight: 600,
+                },
+              }}
             />
             <Button
-              leftSection={<Sparkles size={20} />}
-              variant="light"
-              color="violet"
-              fullWidth
-              size="md"
               onClick={() => {
-                handleLabelWithTextPrompt();
+                handleExportProject();
               }}
-              loading={loadingBtn.labelWithTextPromt}
+              loading={loadingBtn.exportProject}
+              size="sm"
+              rightSection={<Download size={16} />}
             >
-              Tìm đối tượng với AI
+              Export
             </Button>
-          </Stack>
-        </Card>
-      )}
-    </div>
+          </Flex>
+        </Flex>
+      </div>
+
+      <Flex
+        style={{
+          flex: "1",
+        }}
+      >
+        {/* Left Sidebar Navigation */}
+        <Flex
+          direction="column"
+          style={{
+            borderRight: "1px solid #2c2e33",
+            backgroundColor: "var(--mantine-color-gray-9)",
+            width: "80px",
+          }}
+        >
+          <Button
+            onClick={() => setActiveSection("images")}
+            variant={activeSection === "images" ? "filled" : "subtle"}
+            size="lg"
+            style={{
+              borderRadius: "0 8px 8px 0px",
+              width: "100%",
+              padding: "4px",
+              maxHeight: "auto",
+              height: "auto",
+            }}
+          >
+            <Flex direction="column" align="center" gap={6}>
+              <Image size={24} />
+              <Text size="xs" fw={500}>
+                Images
+              </Text>
+            </Flex>
+          </Button>
+
+          <Button
+            onClick={() => setActiveSection("labels")}
+            variant={activeSection === "labels" ? "filled" : "subtle"}
+            size="lg"
+            style={{
+              borderRadius: "0 8px 8px 0px",
+              width: "100%",
+              padding: "4px",
+              maxHeight: "auto",
+              height: "auto",
+            }}
+          >
+            <Flex direction="column" align="center" gap={6}>
+              <Tag size={24} />
+              <Text size="xs" fw={500}>
+                Labels
+              </Text>
+            </Flex>
+          </Button>
+        </Flex>
+
+        {/* Content Panel */}
+        {activeSection === "images" ? (
+          <Flex direction={"column"} style={{ flex: 1 }}>
+            <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
+              <Text size="xl" fw={700} mb="md">
+                Danh sách ảnh
+              </Text>
+
+              <Button
+                leftSection={<Upload size={20} />}
+                onClick={() => handleSelectFileUpload()}
+                fullWidth
+                size="md"
+              >
+                Upload Ảnh
+              </Button>
+            </div>
+
+            <ScrollArea style={{ flex: 1, padding: "16px", width: "100%" }}>
+              <Text size="sm" fw={500} c="dimmed" mb="md">
+                Ảnh đã tải ({images.length})
+              </Text>
+
+              {images.length === 0 ? (
+                <Stack align="center" gap="xs" style={{ padding: "64px 0" }}>
+                  <Image size={48} color="gray" strokeWidth={1.5} />
+                  <Text size="sm" c="dimmed">
+                    Chưa có ảnh nào
+                  </Text>
+                </Stack>
+              ) : (
+                <Stack gap="xs" style={{ width: "100%" }}>
+                  {images.map((image: ImageType) => (
+                    <ImageThumbnail
+                      key={image.id}
+                      image={image}
+                      isSelected={selectedImage?.id === image.id}
+                      onSelect={() => {
+                        if (selectedImage?.id === image.id) {
+                          return;
+                        }
+
+                        setAnnotations([]);
+                        setSelectedImage(image);
+                      }}
+                      onDelete={deleteImage}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </ScrollArea>
+          </Flex>
+        ) : (
+          <Flex direction={"column"} style={{ flex: 1 }}>
+            <div style={{ padding: "16px", borderBottom: "1px solid #2c2e33" }}>
+              <Text size="xl" fw={700} mb="md">
+                Danh sách nhãn
+              </Text>
+              <Flex gap="4">
+                {selectedProject?.labels.map((label, idx) => (
+                  <Badge key={idx} size="sm" variant="dot" color="brand">
+                    {label}
+                  </Badge>
+                ))}
+              </Flex>
+            </div>
+
+            <Stack gap="md" style={{ flex: 1, padding: "16px", width: "100%" }}>
+              <MultiSelect
+                variant="filled"
+                label={
+                  <Text
+                    style={{ display: "inline-block", marginBottom: "8px" }}
+                    size="sm"
+                  >
+                    Danh sách nhãn
+                  </Text>
+                }
+                required
+                data={selectedProject?.labels ? selectedProject.labels : []}
+                value={labelInput ? labelInput : []}
+                onChange={(value) => setLabelInput(value)}
+                searchValue={labelSerachInput}
+                onSearchChange={setLabelSearchInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && labelSerachInput.trim() !== "") {
+                    handleUpdateLabels();
+                  }
+                }}
+                renderOption={renderMultiSelectOption}
+                placeholder="Enter để thêm nhãn mới"
+                hidePickedOptions
+                searchable
+                size="md"
+              />
+              <ScrollArea style={{ maxHeight: "50vh" }}>
+                {labelInput?.map((label, index) => (
+                  <Textarea
+                    key={index}
+                    required
+                    variant="filled"
+                    label={
+                      <Text
+                        style={{ display: "inline-block", marginBottom: "8px" }}
+                        size="sm"
+                      >
+                        Promt xử lý của {label}
+                      </Text>
+                    }
+                    value={prompts[label] ? prompts[label] : ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setPrompts((prev) => {
+                        const next = { ...prev };
+                        next[label] = value;
+                        return next;
+                      });
+                    }}
+                    rows={3}
+                    placeholder="Nhập prompt xử lý"
+                  />
+                ))}
+              </ScrollArea>
+              <Button
+                leftSection={<Sparkles size={20} />}
+                variant="light"
+                color="violet"
+                fullWidth
+                size="md"
+                onClick={() => {
+                  handleLabelWithTextPrompt();
+                }}
+                loading={loadingBtn.labelWithTextPromt}
+              >
+                Tìm đối tượng với AI
+              </Button>
+            </Stack>
+          </Flex>
+        )}
+      </Flex>
+    </Card>
   );
 };
 

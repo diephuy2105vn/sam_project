@@ -1,0 +1,9 @@
+version: '3'
+services:
+  react-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: label_ui 
+    ports:
+      - 8888:80

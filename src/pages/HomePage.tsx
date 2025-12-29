@@ -40,7 +40,7 @@ export type ProjectType = {
   name: string;
   description: string;
   labels: string[];
-  createdAt?: string;
+  created_at?: string;
 };
 
 const HomePage = () => {
@@ -231,79 +231,92 @@ const HomePage = () => {
                       key={project.id}
                       span={{ base: 12, sm: 6, md: 4 }}
                     >
-                      <Card withBorder shadow="md" padding="lg" radius="md">
-                        {/* Content */}
-                        <Stack gap="xs">
-                          <Group justify="space-between" align="flex-start">
-                            <Text fw={600} size="lg" lineClamp={1}>
-                              {project.name}
-                            </Text>
-                            <Menu shadow="md" width={200}>
-                              <Menu.Target>
-                                <ActionIcon
-                                  variant="subtle"
-                                  color="gray"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <IconDots size={20} />
-                                </ActionIcon>
-                              </Menu.Target>
-                              <Menu.Dropdown>
-                                <Menu.Item
-                                  leftSection={<IconEdit size={16} />}
-                                  style={{}}
-                                  onClick={() => {
-                                    toggleModal("update");
-                                    setUpdatingProject(project);
-                                  }}
-                                >
-                                  Chỉnh sửa
-                                </Menu.Item>
-                                <Menu.Item
-                                  leftSection={<IconTrash size={16} />}
-                                  color="red"
+                      <Link
+                        to={`/project/${project.id}`}
+                        style={{ textDecoration: "none" }}
+                      >
+                        <Card withBorder shadow="md" padding="lg" radius="md">
+                          {/* Content */}
+                          <Stack gap="xs">
+                            <Group justify="space-between" align="flex-start">
+                              <Text fw={600} size="lg" lineClamp={1}>
+                                {project.name}
+                              </Text>
+                              <Menu shadow="md" width={200}>
+                                <Menu.Target>
+                                  <ActionIcon
+                                    variant="subtle"
+                                    color="gray"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <IconDots size={20} />
+                                  </ActionIcon>
+                                </Menu.Target>
+                                <Menu.Dropdown
                                   onClick={(e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
-                                    setDeletingProject(project);
                                   }}
                                 >
-                                  Xóa
-                                </Menu.Item>
-                              </Menu.Dropdown>
-                            </Menu>
-                          </Group>
+                                  <Menu.Item
+                                    leftSection={<IconEdit size={16} />}
+                                    style={{}}
+                                    onClick={() => {
+                                      toggleModal("update");
+                                      setUpdatingProject(project);
+                                    }}
+                                  >
+                                    Chỉnh sửa
+                                  </Menu.Item>
+                                  <Menu.Item
+                                    leftSection={<IconTrash size={16} />}
+                                    color="red"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingProject(project);
+                                    }}
+                                  >
+                                    Xóa
+                                  </Menu.Item>
+                                </Menu.Dropdown>
+                              </Menu>
+                            </Group>
 
-                          {project.description && (
-                            <Text size="sm" c="dimmed" lineClamp={3}>
-                              {project.description}
-                            </Text>
-                          )}
+                            {project.description && (
+                              <Text size="sm" c="dimmed" lineClamp={3}>
+                                {project.description}
+                              </Text>
+                            )}
 
-                          {project.labels.length > 0 && (
-                            <Flex gap={4} wrap="wrap" mt="xs">
-                              {project.labels.map((label, idx) => (
-                                <Badge
-                                  key={idx}
-                                  size="sm"
-                                  variant="dot"
-                                  color="blue"
-                                >
-                                  {label}
-                                </Badge>
-                              ))}
-                            </Flex>
-                          )}
+                            {project.labels.length > 0 && (
+                              <Flex gap={4} wrap="wrap" mt="xs">
+                                {project.labels.map((label, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    size="sm"
+                                    variant="dot"
+                                    color="blue"
+                                  >
+                                    {label}
+                                  </Badge>
+                                ))}
+                              </Flex>
+                            )}
 
-                          {project?.createdAt && (
-                            <Text size="xs" c="dimmed" mt="xs">
-                              Tạo ngày:{" "}
-                              {new Date(project?.createdAt).toLocaleDateString(
-                                "vi-VN"
-                              )}
-                            </Text>
-                          )}
-                        </Stack>
-                      </Card>
+                            {project?.created_at && (
+                              <Text size="xs" c="dimmed" mt="xs">
+                                Tạo ngày:{" "}
+                                {new Date(
+                                  project?.created_at
+                                ).toLocaleDateString("vi-VN")}
+                              </Text>
+                            )}
+                          </Stack>
+                        </Card>
+                      </Link>
                     </Grid.Col>
                   ))}
                 </Grid>
@@ -417,11 +430,11 @@ const HomePage = () => {
                               padding: "16px",
                             }}
                           >
-                            {project.createdAt && (
+                            {project.created_at && (
                               <Text size="sm" c="dimmed">
-                                {new Date(project.createdAt).toLocaleDateString(
-                                  "vi-VN"
-                                )}
+                                {new Date(
+                                  project.created_at
+                                ).toLocaleDateString("vi-VN")}
                               </Text>
                             )}
                           </Table.Td>
@@ -436,15 +449,26 @@ const HomePage = () => {
                                   <ActionIcon
                                     variant="subtle"
                                     color="gray"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
                                   >
                                     <IconDots size={20} />
                                   </ActionIcon>
                                 </Menu.Target>
-                                <Menu.Dropdown>
+                                <Menu.Dropdown
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                >
                                   <Menu.Item
                                     leftSection={<IconEdit size={16} />}
-                                    style={{}}
+                                    onClick={() => {
+                                      toggleModal("update");
+                                      setUpdatingProject(project);
+                                    }}
                                   >
                                     Chỉnh sửa
                                   </Menu.Item>
