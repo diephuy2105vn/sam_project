@@ -175,6 +175,8 @@ const ProjectOnly = () => {
       setImages((pre) =>
         pre.map((img) => (img.id === image.id ? res.data.images[0] : img))
       );
+
+      return res.data.images[0];
     }
   };
 
@@ -193,17 +195,9 @@ const ProjectOnly = () => {
 
     setImages((prev: ImageType[]) => [...prev, ...newImages]);
 
-    if (!selectedImage && newImages.length > 0) {
-      setSelectedImage(newImages[0]);
-    }
-
-    if (!selectedImage && newImages.length > 0) {
-      setSelectedImage(newImages[0]);
-    }
-
     for (const img of newImages) {
       try {
-        await uploadSingleImage(img);
+        const imageUploaded = await uploadSingleImage(img);
 
         setImages((prev) =>
           prev.map((i) =>
@@ -215,6 +209,10 @@ const ProjectOnly = () => {
               : i
           )
         );
+
+        if (!selectedImage && newImages.length > 0) {
+          setSelectedImage(imageUploaded);
+        }
       } catch {
         setImages((prev) =>
           prev.map((i) =>

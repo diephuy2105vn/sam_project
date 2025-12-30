@@ -1,8 +1,10 @@
-version: '3'
 services:
   react-app:
+    image: label_ui
     build:
       context: .
+      args:
+        VITE_BASE_URL: https://api-label.tado.vn
       dockerfile: Dockerfile
     container_name: label_ui 
     ports:
