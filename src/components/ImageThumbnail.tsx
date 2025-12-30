@@ -79,13 +79,12 @@ const ImageThumbnail = ({
         {image.filename}
       </Text>
       <Popover
-        width={240}
+        width={220}
         position="top-end"
         opened={isOpen}
         onChange={setIsOpen}
         withArrow
         shadow="md"
-        offset={{ mainAxis: 5, crossAxis: 10 }}
       >
         <Popover.Target>
           <ActionIcon
@@ -107,11 +106,12 @@ const ImageThumbnail = ({
           </ActionIcon>
         </Popover.Target>
         <Popover.Dropdown
+          p="xs"
           onClick={(e) => {
             e.stopPropagation();
           }}
         >
-          <Text size="sm" c="red" style={{ marginBottom: "8px" }}>
+          <Text size="sm" c="red" fw="500" style={{ marginBottom: "8px" }}>
             Xác nhận xóa
           </Text>
           <Text size="xs" style={{ marginBottom: "8px" }}>
@@ -120,7 +120,8 @@ const ImageThumbnail = ({
           <Flex justify="end" gap="xs">
             <Button
               size="xs"
-              variant="light"
+              color="gray"
+              variant="subtle"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsOpen(false);

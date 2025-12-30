@@ -322,6 +322,10 @@ const ImageAnnotationTool = ({
 
   useEffect(() => {
     setPointToLabel([]);
+
+    if (selectedTool === "magic") {
+      setIsCollapsed(false);
+    }
   }, [selectedTool, image]);
 
   // Thêm useEffect để lắng nghe sự kiện resize
@@ -456,8 +460,8 @@ const ImageAnnotationTool = ({
             p="0"
             style={{
               position: "absolute",
-              top: 0,
-              left: 0,
+              bottom: 10,
+              right: 0,
               zIndex: 10,
               width: !isCollapsed ? "250px" : "28px",
               overflow: "hidden",
@@ -476,7 +480,7 @@ const ImageAnnotationTool = ({
                 variant="light"
                 color="gray"
               >
-                {isCollapsed ? <ChevronsRight /> : <ChevronsLeft />}
+                {isCollapsed ? <ChevronsLeft /> : <ChevronsRight />}
               </ActionIcon>
               <Flex p="sm" direction="column">
                 <Text size="sm" mb={8} c="brand" fw={500}>
