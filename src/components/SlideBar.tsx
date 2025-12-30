@@ -67,9 +67,19 @@ const Slidebar = ({
   const [labelSerachInput, setLabelSearchInput] = useState("");
   const [prompts, setPrompts] = useState<Record<string, string>>({});
 
-  const deleteImage = async (id: string) => {
+  const deleteImage = async (id?: string, _id?: string) => {
     try {
+      if (!id && !_id) return;
+
+      if (!id) {
+        setImages((prev: ImageType[]) =>
+          prev?.filter((img) => img._id !== _id)
+        );
+        return;
+      }
+
       await imageApi.deleteImage(id);
+
       setImages((prev: ImageType[]) => prev?.filter((img) => img.id !== id));
       if (selectedImage?.id === id) {
         setSelectedImage(null);

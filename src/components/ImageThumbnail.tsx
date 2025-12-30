@@ -2,13 +2,17 @@ import {
   ActionIcon,
   Button,
   Card,
+  Center,
   Flex,
   Image,
   Popover,
   Progress,
+  Stack,
   Text,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { IconTrash } from "@tabler/icons-react";
+import { ImageIcon, ImageOffIcon } from "lucide-react";
 import { useState } from "react";
 import type { ImageType } from "../pages/ProjectOnly";
 const ImageThumbnail = ({
@@ -20,14 +24,25 @@ const ImageThumbnail = ({
   image: ImageType;
   isSelected: boolean;
   onSelect: () => void;
-  onDelete: (id: string) => void;
+  onDelete: (id?: string, _id?: string) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Card
       withBorder
-      onClick={onSelect}
+      onClick={
+        image?.id
+          ? onSelect
+          : () => {
+              notifications.show({
+                color: "orange",
+                title: "Không thể lấy ảnh",
+                message: "Ảnh đang xử lý hoặc đã có lỗi",
+                position: "top-right",
+              });
+            }
+      }
       styles={{
         root: {
           position: "relative",
@@ -42,7 +57,6 @@ const ImageThumbnail = ({
         },
       }}
     >
-      {/* Progress bar */}
       {image.uploading && (
         <Progress
           value={100}
@@ -58,13 +72,41 @@ const ImageThumbnail = ({
           }}
         />
       )}
-      <Image
-        src={`https://api-label.tado.vn/api/images/${image.id}`}
-        alt={image.filename}
-        height={120}
-        fit="cover"
-        style={{ width: "100%" }}
-      />
+      {image?.id ? (
+        <Image
+          src={`https://api-label.tado.vn/api/images/${image.id}`}
+          alt={image.filename}
+          height={120}
+          fit="cover"
+          style={{ width: "100%" }}
+        />
+      ) : (
+        <Center
+          h={120}
+          style={{
+            width: "100%",
+            border: "1px dashed #ccc",
+            borderRadius: 8,
+          }}
+        >
+          <Stack align="center" gap={8}>
+            {image.error ? (
+              <ImageOffIcon size={32} color="gray" />
+            ) : (
+              <ImageIcon size={32} color="gray" />
+            )}
+            {image.error ? (
+              <Text size="xs" c="dimmed">
+                Tải lên không thành công
+              </Text>
+            ) : (
+              <Text size="xs" c="dimmed">
+                Đang upload...
+              </Text>
+            )}
+          </Stack>
+        </Center>
+      )}
 
       <Text
         size="xs"
@@ -135,7 +177,7 @@ const ImageThumbnail = ({
               variant="light"
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete(image.id);
+                onDelete(image.id, image._id);
               }}
             >
               Xác nhận
