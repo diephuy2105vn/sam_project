@@ -13,11 +13,13 @@ import samApi from "../services/samApi";
 import type { ProjectType } from "./HomePage";
 
 export type ImageType = {
-  id: string;
+  id?: string;
+  _id: string;
   filename: string;
   url: string;
   file: File;
   uploading?: boolean;
+  error?: boolean;
 };
 
 // 1️⃣ Point trong mask (tọa độ x, y)
@@ -172,9 +174,7 @@ const ProjectOnly = () => {
 
     const uploadedImages = res.data.images;
     if (uploadedImages.length > 0) {
-      setImages((pre) =>
-        pre.map((img) => (img.id === image.id ? res.data.images[0] : img))
-      );
+      return uploadedImages[0];
     }
   };
 
@@ -184,7 +184,7 @@ const ProjectOnly = () => {
     const files = Array.from(e.target.files);
 
     const newImages = files.map((file, index) => ({
-      id: Date.now().toString() + index.toString(),
+      _id: Date.now().toString() + index.toString(),
       url: URL.createObjectURL(file as Blob),
       uploading: true,
       file: file,
@@ -193,32 +193,61 @@ const ProjectOnly = () => {
 
     setImages((prev: ImageType[]) => [...prev, ...newImages]);
 
-    if (!selectedImage && newImages.length > 0) {
-      setSelectedImage(newImages[0]);
-    }
-
-    if (!selectedImage && newImages.length > 0) {
-      setSelectedImage(newImages[0]);
-    }
-
     for (const img of newImages) {
       try {
-        await uploadSingleImage(img);
+        const imageUploaded = await uploadSingleImage(img);
+
+        if (!imageUploaded) {
+          notifications.show({
+            color: "red",
+            title: "Đã có lỗi xảy ra",
+            message: "Tải lên ảnh không thành công",
+            position: "top-right",
+          });
+          setImages((prev) =>
+            prev.map((i) =>
+              i._id === img._id
+                ? {
+                    ...i,
+                    error: true,
+                    uploading: false,
+                  }
+                : i
+            )
+          );
+          return;
+        }
 
         setImages((prev) =>
           prev.map((i) =>
-            i.id === img.id
+            i._id === img._id
               ? {
-                  ...i,
+                  ...imageUploaded,
                   uploading: false,
                 }
               : i
           )
         );
+
+        if (!selectedImage) {
+          setSelectedImage(imageUploaded);
+        }
       } catch {
+        notifications.show({
+          color: "red",
+          title: "Đã có lỗi xảy ra",
+          message: "Tải lên ảnh không thành công",
+          position: "top-right",
+        });
         setImages((prev) =>
           prev.map((i) =>
-            i.id === img.id ? { ...i, uploading: false, error: true } : i
+            i._id === img._id
+              ? {
+                  ...i,
+                  error: true,
+                  uploading: false,
+                }
+              : i
           )
         );
       }

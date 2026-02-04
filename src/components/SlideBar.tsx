@@ -77,9 +77,19 @@ const Slidebar = ({
   const [labelSerachInput, setLabelSearchInput] = useState("");
   const [prompts, setPrompts] = useState<Record<string, PromptConfig>>({});
 
-  const deleteImage = async (id: string) => {
+  const deleteImage = async (id?: string, _id?: string) => {
     try {
+      if (!id && !_id) return;
+
+      if (!id) {
+        setImages((prev: ImageType[]) =>
+          prev?.filter((img) => img._id !== _id)
+        );
+        return;
+      }
+
       await imageApi.deleteImage(id);
+
       setImages((prev: ImageType[]) => prev?.filter((img) => img.id !== id));
       if (selectedImage?.id === id) {
         setSelectedImage(null);
@@ -235,17 +245,33 @@ const Slidebar = ({
 
     setLoadingBtn((prev) => ({ ...prev, exportProject: true }));
     try {
-      const res = await exportApi.exportProject(selectedProject.id);
-      if (res.data.success) {
-        const downloadUrl = res.data.download_url;
-        const fullUrl = `${window.location.origin}${downloadUrl}`;
+      const res = await exportApi.exportProject(selectedProject.id, {
+        responseType: "blob",
+      });
+      if (res.data) {
+        const blob = new Blob([res.data], {
+          type: "application/zip",
+        });
+
+        const url = window.URL.createObjectURL(blob);
 
         const link = document.createElement("a");
-        link.href = fullUrl;
-        link.download = ""; // để browser tự lấy tên file
+        link.href = url;
+
+        link.download = `project_${selectedProject.name}.zip`;
+
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        notifications.show({
+          title: "Thành công",
+          message: "Xuất project thành công",
+          color: "green",
+          position: "top-right",
+        });
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
