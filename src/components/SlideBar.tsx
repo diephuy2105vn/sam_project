@@ -7,6 +7,7 @@ import {
   MultiSelect,
   ScrollArea,
   Select,
+  Slider,
   Stack,
   Text,
   Textarea,
@@ -15,15 +16,19 @@ import {
 import { notifications } from "@mantine/notifications";
 import axios from "axios";
 import {
+  ChartBar,
   Download,
   Home,
   Image,
+  Pencil,
+  Settings,
   Sparkles,
   Tag,
   Trash,
   Upload,
+  X,
 } from "lucide-react";
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { ProjectType } from "../pages/HomePage";
 import type { AnnotationType, ImageType } from "../pages/ProjectOnly";
@@ -32,6 +37,11 @@ import imageApi from "../services/imageApi";
 import projectApi from "../services/projectApi";
 import samApi from "../services/samApi";
 import ImageThumbnail from "./ImageThumbnail";
+
+type PromptConfig = {
+  prompt: string;
+  confidenceThreshold: number;
+};
 
 const Slidebar = ({
   projects,
@@ -65,7 +75,7 @@ const Slidebar = ({
   const [activeSection, setActiveSection] = useState("images");
   const [labelInput, setLabelInput] = useState<string[]>([]);
   const [labelSerachInput, setLabelSearchInput] = useState("");
-  const [prompts, setPrompts] = useState<Record<string, string>>({});
+  const [prompts, setPrompts] = useState<Record<string, PromptConfig>>({});
 
   const deleteImage = async (id: string) => {
     try {
@@ -114,7 +124,7 @@ const Slidebar = ({
             if (!selectedProject?.id) return;
 
             const newLabels = selectedProject.labels?.filter(
-              (l) => l != option.value
+              (l) => l != option.value,
             );
 
             await projectApi.updateProject(selectedProject.id, {
@@ -122,7 +132,7 @@ const Slidebar = ({
               labels: newLabels,
             });
             setSelectedProject((pre) =>
-              pre ? { ...pre, labels: newLabels } : null
+              pre ? { ...pre, labels: newLabels } : null,
             );
           }}
           size="sm"
@@ -150,7 +160,7 @@ const Slidebar = ({
         setLabelInput((prev) => [...prev, labelSerachInput.trim()]);
 
         setSelectedProject((pre) =>
-          pre ? { ...pre, labels: newLabels } : null
+          pre ? { ...pre, labels: newLabels } : null,
         );
 
         setLabelSearchInput("");
@@ -170,12 +180,10 @@ const Slidebar = ({
   };
 
   const handleLabelWithTextPrompt = async () => {
-    console.log("call");
     if (!selectedImage || loadingBtn.labelWithTextPromt) {
       return;
     }
 
-    console.log("call");
     if (labelInput.length <= 0) {
       notifications.show({
         color: "yellow",
@@ -186,10 +194,13 @@ const Slidebar = ({
       return;
     }
 
-    const promptsArray = labelInput.map((label) => prompts[label] || "");
+    const promptsArray = labelInput.map((label) => prompts[label].prompt || "");
+    const probArray = labelInput.map(
+      (label) => prompts[label].confidenceThreshold / 100 || 0.01,
+    );
 
     const hasEmptyPrompt = promptsArray.some(
-      (prompt) => !prompt || prompt.length === 0
+      (prompt) => !prompt || prompt.length === 0,
     );
 
     if (hasEmptyPrompt) {
@@ -208,6 +219,7 @@ const Slidebar = ({
       image_id: selectedImage.id,
       labels: labelInput,
       prompts: promptsArray,
+      prob: probArray,
     });
 
     const data = res.data;
@@ -293,7 +305,7 @@ const Slidebar = ({
               value={selectedProject?.id?.toString()}
               onChange={(value) => {
                 const project = projects.find(
-                  (p) => p.id?.toString() === value?.toString()
+                  (p) => p.id?.toString() === value?.toString(),
                 );
                 if (project) {
                   navigator(`/project/${project.id}`);
@@ -383,6 +395,7 @@ const Slidebar = ({
               </Text>
             </Flex>
           </Button>
+
           <Button
             onClick={() => handleExportProject()}
             variant="subtle"
@@ -523,36 +536,83 @@ const Slidebar = ({
 
             {labelInput.length > 0 && (
               <ScrollArea p="sm">
-                {labelInput?.map((label, index) => (
-                  <Textarea
-                    key={index}
-                    required
-                    variant="filled"
-                    label={
-                      <Text
-                        style={{
-                          display: "inline-block",
-                          textWrap: "wrap",
-                          marginBottom: "8px",
+                <Flex direction="column" gap={"xs"}>
+                  {labelInput?.map((label, index) => (
+                    <Card p="xs" shadow="xs" radius="sm" withBorder>
+                      <Flex justify="space-between" align="center" mb={"md"}>
+                        <Text fw={700}>
+                          {label.charAt(0).toUpperCase() + label.slice(1)}
+                        </Text>
+                      </Flex>
+                      <Flex justify="space-between" align="center" mb={"sm"}>
+                        <Text size="sm">Confidence threshold:</Text>
+                        <Text size="sm">
+                          {prompts[label]?.confidenceThreshold ?? 1}%
+                        </Text>
+                      </Flex>
+                      <Slider
+                        value={prompts[label]?.confidenceThreshold}
+                        onChange={(value) => {
+                          setPrompts((prev) => {
+                            const next = { ...prev };
+                            if (!next[label]) {
+                              next[label] = {
+                                prompt: "",
+                                confidenceThreshold: 1,
+                              };
+                            }
+                            next[label].confidenceThreshold = value;
+                            return next;
+                          });
                         }}
+                        min={1}
+                        max={99}
+                        label={null}
+                        marks={[
+                          { value: 1, label: <Text size="xs">1%</Text> },
+                          { value: 99, label: <Text size="xs">99%</Text> },
+                        ]}
+                        color="violet"
                         size="sm"
-                      >
-                        Promt xử lý của {label}
-                      </Text>
-                    }
-                    value={prompts[label] ? prompts[label] : ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setPrompts((prev) => {
-                        const next = { ...prev };
-                        next[label] = value;
-                        return next;
-                      });
-                    }}
-                    rows={3}
-                    placeholder="Nhập prompt xử lý"
-                  />
-                ))}
+                        mb="lg"
+                      />
+                      <Textarea
+                        key={index}
+                        required
+                        variant="filled"
+                        label={
+                          <Text
+                            style={{ display: "inline-block" }}
+                            size="sm"
+                            mb="sm"
+                          >
+                            Prompt
+                          </Text>
+                        }
+                        value={
+                          prompts[label]?.prompt ? prompts[label].prompt : ""
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setPrompts((prev) => {
+                            const next = { ...prev };
+                            if (!next[label]) {
+                              next[label] = {
+                                prompt: "",
+                                confidenceThreshold: 1,
+                              };
+                            }
+                            next[label].prompt = value;
+                            return next;
+                          });
+                        }}
+                        radius="sm"
+                        rows={3}
+                        placeholder="Nhập prompt xử lý"
+                      />
+                    </Card>
+                  ))}
+                </Flex>
               </ScrollArea>
             )}
 

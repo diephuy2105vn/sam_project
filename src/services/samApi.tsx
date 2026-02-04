@@ -35,6 +35,18 @@ const samApi = {
       ...config,
     });
   },
+
+  createAnnotation: (data = {}, config = {}) => {
+    return axiosInstance.post("/api/sam/annotation", data, {
+      ...config,
+    });
+  },
+
+  updateAnnotation: (annotationId: string, data = {}, config = {}) => {
+    return axiosInstance.put(`/api/sam/annotation/${annotationId}`, data, {
+      ...config,
+    });
+  },
 };
 
 export default samApi;
